@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Szczegóły Produktu - 6 w Dzienniku</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body class="bg-[#FAFAFC] text-slate-800 min-h-screen flex flex-col justify-between">
+    <main class="max-w-6xl mx-auto px-6 py-12 w-full">
+        <div id="product-details" class="grid grid-cols-1 md:grid-cols-2 gap-12 bg-white p-8 rounded-3xl border border-purple-100 shadow-sm">
+        </div>
+    </main>
+
+    <script>
+        const supabase = supabase.createClient("https://aouuylcmewkowgpijuci.supabase.co", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFvdXV5bGNtZXdrb3dncGlqdWNpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAzNTM3NDcsImV4cCI6MjEwNTkyOTc0N30.IFGjFzXYzJyN8QjKAs1Zoslyx7Nv3xFFv7SND7xsE0g");
+        const pathParts = window.location.pathname.split('/');
+        const productId = pathParts[2]; 
+
+        let currentImgIndex = 0;
+        let images = [];
+
+        async function loadProduct() {
+            const { data: product } = await supabase.from('products').select('*').eq('id', productId).single();
+            const { data: reviews } = await supabase.from('reviews').select('*').eq('product_id', productId).eq('is_approved', true);
+
+            images = product.images || [];
+
+            document.getElementById('product-details').innerHTML = `
+                <div class="relative">
+                    <img id="main-image" src="${images[0]}" class="w-full h-96 object-cover rounded-2xl">
+                    ${images.length > 1 ? `
+                        <button onclick="changeImg(-1)" class="absolute left-2 top-1/2 bg-white/80 p-2 rounded-full shadow">❮</button>
+                        <button onclick="changeImg(1)" class="absolute right-2 top-1/2 bg-white/80 p-2 rounded-full shadow">❯</button>
+                    ` : ''}
+                </div>
+                <div>
+                    <h1 class="text-3xl font-extrabold mb-4">${product.title}</h1>
+                    <p class="text-slate-600 mb-6">${product.description}</p>
+                    ${product.old_price_30_days ? `<p class="line-through text-xs text-slate-400">Cena sprzed 30 dni przed obniżką: ${product.old_price_30_days} PLN</p>` : ''}
+                    <p class="text-2xl font-bold text-[#5B21B6] mb-6">${product.price} PLN</p>
+                    <button onclick="addToCart('${product.id}', '${product.title}', ${product.price})" class="w-full bg-gradient-to-r from-[#5B21B6] to-[#EC4899] text-white font-bold py-4 rounded-2xl shadow-lg mb-8">Dodaj do koszyka</button>
+                    
+                    <h3 class="font-bold text-lg mb-4">Opinie klientów:</h3>
+                    <div class="space-y-4">
+                        ${reviews.length ? reviews.map(r => `
+                            <div class="border-b pb-2">
+                                <div class="flex justify-between text-xs font-semibold">
+                                    <span>${r.user_name}</span>
+                                    <span>⭐ ${r.rating}/5</span>
+                                </div>
+                                <p class="text-sm text-slate-600 mt-1">${r.comment}</p>
+                            </div>
+                        `).join('') : '<p class="text-sm text-slate-400">Brak opinii dla tego produktu.</p>'}
+                    </div>
+                </div>
+            `;
+        }
+
+        function changeImg(dir) {
+            currentImgIndex = (currentImgIndex + dir + images.length) % images.length;
+            document.getElementById('main-image').src = images[currentImgIndex];
+        }
+
+        loadProduct();
+    </script>
+</body>
+</html>
