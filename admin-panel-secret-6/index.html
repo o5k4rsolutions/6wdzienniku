@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel Admina - 6 w Dzienniku</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body class="bg-slate-100 p-8 font-sans">
+    <div class="max-w-6xl mx-auto bg-white p-8 rounded-3xl shadow-lg">
+        <h1 class="text-3xl font-bold mb-8 text-purple-900">Panel Administratora</h1>
+
+        <section class="mb-12 border-b pb-8">
+            <h2 class="text-xl font-bold mb-4">Dodaj / Edytuj Produkt</h2>
+            <form id="product-form" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <input type="text" id="p-title" placeholder="Tytuł produktu" class="border p-3 rounded-xl" required>
+                <select id="p-type" class="border p-3 rounded-xl">
+                    <option value="digital">Produkt Cyfrowy (E-produkt)</option>
+                    <option value="physical">Produkt Fizyczny</option>
+                </select>
+                <input type="number" step="0.01" id="p-price" placeholder="Cena PLN" class="border p-3 rounded-xl" required>
+                <input type="number" step="0.01" id="p-old-price" placeholder="Cena sprzed 30 dni" class="border p-3 rounded-xl">
+                <textarea id="p-desc" placeholder="Opis produktu" class="border p-3 rounded-xl md:col-span-2"></textarea>
+
+                <div class="md:col-span-2">
+                    <label class="block text-xs font-bold mb-1">Zdjęcia produktu:</label>
+                    <input type="file" id="p-images" multiple class="border p-2 rounded-xl w-full">
+                </div>
+
+                <div class="md:col-span-2 bg-purple-50 p-4 rounded-xl">
+                    <label class="block text-xs font-bold mb-1">E-produkt: Załącz plik/folder do pobrania:</label>
+                    <input type="file" id="p-file" class="border p-2 rounded-xl w-full">
+                </div>
+
+                <button type="button" onclick="saveProduct()" class="md:col-span-2 bg-[#5B21B6] text-white py-3 rounded-xl font-bold">Zapisz i opublikuj produkt</button>
+            </form>
+        </section>
+
+        <section class="mb-12 border-b pb-8">
+            <h2 class="text-xl font-bold mb-4">Dodaj Kod Rabatowy</h2>
+            <form id="coupon-form" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <input type="text" id="c-code" placeholder="Kod (np. PROMO10)" class="border p-3 rounded-xl uppercase">
+                <select id="c-type" class="border p-3 rounded-xl">
+                    <option value="percent">Procent obniżki (%)</option>
+                    <option value="fixed">Kwota obniżki (PLN)</option>
+                </select>
+                <input type="number" id="c-val" placeholder="Wartość" class="border p-3 rounded-xl">
+                <input type="number" id="c-min" placeholder="Min. cena zamówienia" class="border p-3 rounded-xl">
+                <input type="datetime-local" id="c-date" class="border p-3 rounded-xl">
+                <button type="button" onclick="saveCoupon()" class="bg-[#EC4899] text-white py-3 rounded-xl font-bold">Dodaj kod</button>
+            </form>
+        </section>
+
+        <section>
+            <h2 class="text-xl font-bold mb-4">Opinie do zatwierdzenia</h2>
+            <div id="admin-reviews" class="space-y-4"></div>
+        </section>
+    </div>
+
+    <script>
+        const supabase = supabase.createClient("https://aouuylcmewkowgpijuci.supabase.co", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFvdXV5bGNtZXdrb3dncGlqdWNpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAzNTM3NDcsImV4cCI6MjEwNTkyOTc0N30.IFGjFzXYzJyN8QjKAs1Zoslyx7Nv3xFFv7SND7xsE0g");
+
+        async function saveProduct() {
+            const title = document.getElementById('p-title').value;
+            const price = parseFloat(document.getElementById('p-price').value);
+            const oldPrice = parseFloat(document.getElementById('p-old-price').value) || null;
+            const type = document.getElementById('p-type').value;
+            const desc = document.getElementById('p-desc').value;
+            const slug = title.toLowerCase().replace(/ /g, '-').replace(/[^\w-]+/g, '');
+
+            const imageFiles = document.getElementById('p-images').files;
+            let imageUrls = [];
+            for (let f of imageFiles) {
+                const { data } = await supabase.storage.from('moje-pliki').upload(`produkty/${slug}/${f.name}`, f);
+                if (data) imageUrls.push(supabase.storage.from('moje-pliki').getPublicUrl(data.path).data.publicUrl);
+            }
+
+            const digitalFile = document.getElementById('p-file').files[0];
+            let digitalUrl = null, fileType = null;
+            if (digitalFile) {
+                const { data } = await supabase.storage.from('moje-pliki').upload(`produkty/${slug}/content/${digitalFile.name}`, digitalFile);
+                if (data) {
+                    digitalUrl = supabase.storage.from('moje-pliki').getPublicUrl(data.path).data.publicUrl;
+                    fileType = digitalFile.name.split('.').pop();
+                }
+            }
+
+            await supabase.from('products').insert({
+                title, slug, price, old_price_30_days: oldPrice, type, description: desc,
+                images: imageUrls, file_url: digitalUrl, file_type: fileType
+            });
+
+            alert("Produkt został pomyślnie dodany!");
+            location.reload();
+        }
+
+        async function saveCoupon() {
+            await supabase.from('coupons').insert({
+                code: document.getElementById('c-code').value,
+                discount_type: document.getElementById('c-type').value,
+                discount_value: parseFloat(document.getElementById('c-val').value),
+                min_price: parseFloat(document.getElementById('c-min').value) || 0,
+                valid_until: document.getElementById('c-date').value || null
+            });
+            alert("Kod rabatowy dodany!");
+        }
+
+        async function loadPendingReviews() {
+            const { data: reviews } = await supabase.from('reviews').select('*').eq('is_approved', false);
+            document.getElementById('admin-reviews').innerHTML = reviews.map(r => `
+                <div class="border p-4 rounded-xl flex justify-between items-center bg-white">
+                    <div>
+                        <p class="font-bold">${r.user_name} (Ocena: ${r.rating}/5)</p>
+                        <p class="text-sm text-slate-600">${r.comment}</p>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="approveReview('${r.id}')" class="bg-green-600 text-white text-xs px-3 py-2 rounded-lg">Zatwierdź</button>
+                        <button onclick="deleteReview('${r.id}')" class="bg-red-600 text-white text-xs px-3 py-2 rounded-lg">Usuń</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function approveReview(id) {
+            await supabase.from('reviews').update({ is_approved: true }).eq('id', id);
+            loadPendingReviews();
+        }
+
+        async function deleteReview(id) {
+            await supabase.from('reviews').delete().eq('id', id);
+            loadPendingReviews();
+        }
+
+        loadPendingReviews();
+    </script>
+</body>
+</html>
