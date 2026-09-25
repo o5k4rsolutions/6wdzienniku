@@ -75,14 +75,15 @@
     </main>
 
     <footer class="w-full bg-white border-t border-purple-100 py-6 text-center text-xs text-slate-400 mt-12">
-        &copy; 6 w Dzienniku. Wszelkie prawa zastrzeżone.
+        &copy; 2026 - 6 w Dzienniku. Wszelkie prawa zastrzeżone.
     </footer>
 
     <script>
         const SUPABASE_URL = "https://aouuylcmewkowgpijuci.supabase.co";
         const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFvdXV5bGNtZXdrb3dncGlqdWNpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAzNTM3NDcsImV4cCI6MjEwNTkyOTc0N30.IFGjFzXYzJyN8QjKAs1Zoslyx7Nv3xFFv7SND7xsE0g";
-        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
+        
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        
         let currentMode = 'login';
 
         function toggleAuthMode(mode) {
@@ -119,7 +120,7 @@
                     return;
                 }
 
-                const { data, error } = await supabase.auth.signUp({ email, password });
+                const { data, error } = await supabaseClient.auth.signUp({ email, password });
 
                 if (error) {
                     alert("Błąd rejestracji: " + error.message);
@@ -127,7 +128,7 @@
                 }
 
                 if (data.user) {
-                    await supabase.from('profiles').insert({
+                    await supabaseClient.from('profiles').insert({
                         id: data.user.id,
                         full_name: name,
                         email: email
@@ -137,7 +138,7 @@
                     toggleAuthMode('login');
                 }
             } else {
-                const { error } = await supabase.auth.signInWithPassword({ email, password });
+                const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
                 if (error) {
                     alert("Błąd logowania: " + error.message);
                 } else {
@@ -150,7 +151,7 @@
             const email = document.getElementById('auth-email').value.trim();
             if (!email) return alert("Podaj adres e-mail, aby zresetować hasło.");
             
-            const { error } = await supabase.auth.resetPasswordForEmail(email, { 
+            const { error } = await supabaseClient.auth.resetPasswordForEmail(email, { 
                 redirectTo: window.location.origin + '/mojekonto' 
             });
 
@@ -159,18 +160,18 @@
         }
 
         async function initDashboard() {
-            const { data: { user } } = await supabase.auth.getUser();
+            const { data: { user } } = await supabaseClient.auth.getUser();
             if (!user) return;
 
             document.getElementById('auth-container').classList.add('hidden');
             document.getElementById('account-panel').classList.remove('hidden');
 
-            const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single();
+            const { data: profile } = await supabaseClient.from('profiles').select('*').eq('id', user.id).single();
             if (profile) {
                 document.getElementById('welcome-msg').innerText = `Witaj, ${profile.full_name}`;
             }
 
-            const { data: orders } = await supabase.from('orders').select('*').eq('user_id', user.id).order('created_at', { ascending: false });
+            const { data: orders } = await supabaseClient.from('orders').select('*').eq('user_id', user.id).order('created_at', { ascending: false });
             if (orders && orders.length > 0) {
                 const last = orders[0];
                 const extraCount = last.items.length - 1;
@@ -195,7 +196,7 @@
                 document.getElementById('tab-orders').innerHTML = `<p class="text-slate-400 text-sm">Nie złożono jeszcze żadnych zamówień.</p>`;
             }
 
-            const { data: access } = await supabase.from('user_access').select('*').eq('user_id', user.id);
+            const { data: access } = await supabaseClient.from('user_access').select('*').eq('user_id', user.id);
             if (access && access.length > 0) {
                 document.getElementById('tab-access').innerHTML = access.map(a => `
                     <div class="border p-4 rounded-xl flex justify-between items-center">
@@ -217,7 +218,7 @@
         }
 
         async function submitReview() {
-            const { data: { user } } = await supabase.auth.getUser();
+            const { data: { user } } = await supabaseClient.auth.getUser();
             const productId = document.getElementById('rev-product').value;
             const rating = parseInt(document.getElementById('rev-rating').value);
             const comment = document.getElementById('rev-comment').value.trim();
@@ -227,9 +228,9 @@
                 return;
             }
 
-            const { data: profile } = await supabase.from('profiles').select('full_name').eq('id', user.id).single();
+            const { data: profile } = await supabaseClient.from('profiles').select('full_name').eq('id', user.id).single();
 
-            const { error } = await supabase.from('reviews').insert({
+            const { error } = await supabaseClient.from('reviews').insert({
                 product_id: productId,
                 user_id: user.id,
                 user_name: profile ? profile.full_name : 'Klient',
@@ -252,7 +253,7 @@
         }
 
         async function logout() {
-            await supabase.auth.signOut();
+            await supabaseClient.auth.signOut();
             window.location.href = "https://6wdzienniku.vercel.app";
         }
 
