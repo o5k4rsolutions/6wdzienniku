@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sklep - 6 w Dzienniku</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://js.stripe.com/v3/"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>body { font-family: 'Poppins', sans-serif; }</style>
+</head>
+<body class="bg-[#FAFAFC] text-slate-800 min-h-screen flex flex-col justify-between">
+
+    <header class="w-full bg-white/80 backdrop-blur-md sticky top-0 z-50 border-b border-purple-100">
+        <div class="max-w-6xl mx-auto px-6 h-28 flex items-center justify-between relative">
+            <a href="https://6wdzienniku.vercel.app" class="absolute left-1/2 -translate-x-1/2">
+                <img src="https://6wdzienniku.vercel.app/6-content/logo_6wdzienn_kolor.png" class="h-20 sm:h-24 w-auto object-contain">
+            </a>
+            <div class="ml-auto flex items-center gap-4">
+                <button onclick="toggleCart()" class="p-2 text-[#5B21B6] hover:text-[#EC4899] relative">
+                    🛒 <span id="cart-count" class="bg-[#EC4899] text-white text-xs px-2 py-0.5 rounded-full">0</span>
+                </button>
+                <a href="/mojekonto" id="auth-btn" class="text-xs sm:text-sm font-semibold bg-purple-100 text-[#5B21B6] px-4 py-2 rounded-xl">Moje konto / Logowanie</a>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-6xl mx-auto px-6 py-12 w-full flex-grow">
+        <h1 class="text-3xl font-extrabold mb-8 text-center text-slate-900">Nasza Oferta</h1>
+        <div id="products-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+        </div>
+    </main>
+
+    <div id="cart-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden flex justify-end">
+        <div class="bg-white w-full max-w-md h-full p-6 overflow-y-auto flex flex-col justify-between">
+            <div>
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-xl font-bold">Twój Koszyk</h2>
+                    <button onclick="toggleCart()" class="text-2xl">&times;</button>
+                </div>
+                <div id="cart-items" class="space-y-4 mb-6"></div>
+                
+                <div id="coupon-section" class="mb-6">
+                    <div class="flex gap-2">
+                        <input type="text" id="coupon-input" placeholder="Kod rabatowy" class="border p-2 rounded-xl text-sm w-full">
+                        <button onclick="applyCoupon()" class="bg-[#5B21B6] text-white text-sm px-4 rounded-xl">Aplikuj</button>
+                    </div>
+                    <p id="coupon-msg" class="text-xs mt-1"></p>
+                </div>
+
+                <div class="border-t pt-4 text-lg font-bold flex justify-between">
+                    <span>Suma:</span>
+                    <span id="cart-total">0.00 PLN</span>
+                </div>
+
+                <div id="payment-element-container" class="mt-6 hidden">
+                    <form id="payment-form">
+                        <div id="payment-element"></div>
+                        <button id="submit-pay" class="w-full mt-4 bg-gradient-to-r from-[#5B21B6] to-[#EC4899] text-white font-bold py-3 rounded-2xl shadow-lg">Opłać bezpiecznie</button>
+                    </form>
+                </div>
+            </div>
+
+            <button id="checkout-btn" onclick="initiateCheckout()" class="w-full bg-gradient-to-r from-[#5B21B6] to-[#EC4899] text-white font-bold py-4 rounded-2xl shadow-lg mt-6">Przejdź do Płatności</button>
+        </div>
+    </div>
+
+    <script>
+        const SUPABASE_URL = "https://aouuylcmewkowgpijuci.supabase.co";
+        const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFvdXV5bGNtZXdrb3dncGlqdWNpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAzNTM3NDcsImV4cCI6MjEwNTkyOTc0N30.IFGjFzXYzJyN8QjKAs1Zoslyx7Nv3xFFv7SND7xsE0g";
+        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        const stripe = Stripe("pk_live_51U9Lv5Q2ih8UDd9IQJ2lVSHCayHb6qrJUN1y8i3za2f6GZNA0sv4H5tBsFcdbyZAOHL3nvJvQCCA76XYtvBow0kL00yLvmCiTI");
+
+        let cart = JSON.parse(localStorage.getItem('cart') || '[]');
+        let appliedCoupon = null;
+
+        async function loadProducts() {
+            const { data: products } = await supabase.from('products').select('*');
+            const grid = document.getElementById('products-grid');
+            grid.innerHTML = products.map(p => `
+                <div class="bg-white rounded-2xl p-6 border border-purple-100 shadow-sm flex flex-col justify-between">
+                    <div>
+                        <img src="${p.images[0] || 'https://via.placeholder.com/300'}" class="w-full h-48 object-cover rounded-xl mb-4">
+                        <h3 class="font-bold text-lg mb-2">${p.title}</h3>
+                        <div class="mb-4">
+                            ${p.old_price_30_days ? `<span class="line-through text-xs text-slate-400 block">Cena sprzed 30 dni: ${p.old_price_30_days} PLN</span>` : ''}
+                            <span class="text-xl font-bold text-[#5B21B6]">${p.price} PLN</span>
+                        </div>
+                    </div>
+                    <div class="flex gap-2">
+                        <a href="/produkty/${p.id}/${p.slug}" class="w-1/2 border text-center py-2 rounded-xl text-sm font-semibold">Szczegóły</a>
+                        <button onclick="addToCart('${p.id}', '${p.title}', ${p.price})" class="w-1/2 bg-[#5B21B6] text-white py-2 rounded-xl text-sm font-semibold">Do koszyka</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function addToCart(id, title, price) {
+            cart.push({ id, title, price });
+            localStorage.setItem('cart', JSON.stringify(cart));
+            updateCartUI();
+            toggleCart();
+        }
+
+        function updateCartUI() {
+            document.getElementById('cart-count').innerText = cart.length;
+            const container = document.getElementById('cart-items');
+            container.innerHTML = cart.map((item, idx) => `
+                <div class="flex justify-between items-center text-sm border-b pb-2">
+                    <div>
+                        <p class="font-semibold">${item.title}</p>
+                        <p class="text-slate-500">${item.price} PLN</p>
+                    </div>
+                    <button onclick="removeFromCart(${idx})" class="text-red-500 text-xs">Usuń</button>
+                </div>
+            `).join('');
+
+            let total = cart.reduce((sum, item) => sum + parseFloat(item.price), 0);
+            document.getElementById('cart-total').innerText = `${total.toFixed(2)} PLN`;
+        }
+
+        function removeFromCart(index) {
+            cart.splice(index, 1);
+            localStorage.setItem('cart', JSON.stringify(cart));
+            updateCartUI();
+        }
+
+        function toggleCart() {
+            document.getElementById('cart-modal').classList.toggle('hidden');
+        }
+
+        async function initiateCheckout() {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) {
+                alert("Aby złożyć zamówienie, musisz się zarejestrować lub zalogować.");
+                window.location.href = "/mojekonto";
+                return;
+            }
+
+            const response = await fetch('/api/create-payment-intent', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ items: cart, couponCode: appliedCoupon, userId: user.id })
+            });
+            const data = await response.json();
+
+            const elements = stripe.elements({ clientSecret: data.clientSecret });
+            const paymentElement = elements.create('payment');
+            paymentElement.mount('#payment-element');
+
+            document.getElementById('payment-element-container').classList.remove('hidden');
+            document.getElementById('checkout-btn').classList.add('hidden');
+
+            document.getElementById('payment-form').onsubmit = async (e) => {
+                e.preventDefault();
+                const { error } = await stripe.confirmPayment({
+                    elements,
+                    confirmParams: { return_url: window.location.origin + '/mojekonto' }
+                });
+                if (error) alert(error.message);
+            };
+        }
+
+        loadProducts();
+        updateCartUI();
+    </script>
+</body>
+</html>
