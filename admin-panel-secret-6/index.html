@@ -9,6 +9,7 @@
 </head>
 <body class="bg-slate-100 p-8 font-sans min-h-screen">
 
+    <!-- Kontener Główny -->
     <div id="admin-content" class="max-w-6xl mx-auto bg-white p-8 rounded-3xl shadow-lg hidden">
         <div class="flex justify-between items-center mb-8">
             <h1 class="text-3xl font-bold text-purple-900">Panel Administratora</h1>
@@ -44,7 +45,7 @@
                     </div>
                 </div>
 
-                <button type="button" onclick="saveProduct()" class="md:col-span-2 bg-[#5B21B6] text-white py-3 rounded-xl font-bold hover:bg-[#4c1d95] transition">Zapisz i opublikuj produkt</button>
+                <button type="button" id="submit-btn" onclick="saveProduct()" class="md:col-span-2 bg-[#5B21B6] text-white py-3 rounded-xl font-bold hover:bg-[#4c1d95] transition">Zapisz i opublikuj produkt</button>
             </form>
         </section>
 
@@ -68,7 +69,8 @@
             <div id="admin-reviews" class="space-y-4"></div>
         </section>
     </div>
-    
+
+    <!-- Pasek ładowania / Weryfikacja -->
     <div id="loading-spinner" class="text-center py-20 font-bold text-slate-500">
         Weryfikacja uprawnień administratora...
     </div>
@@ -79,6 +81,17 @@
         
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+        // Funkcja automatycznie czyszcząca polskie znaki i znaki specjalne ze ścieżki
+        function cleanPath(path) {
+            return path
+                .normalize("NFD")
+                .replace(/[\u0300-\u036f]/g, "") // Usuwa ogonki (ą->a, ę->e, ó->o itp.)
+                .replace(/Ł/g, "L").replace(/ł/g, "l")
+                .replace(/\s+/g, "_")            // Spacje na podkreślniki _
+                .replace(/[^a-zA-Z0-9_\-\.\/]/g, ""); // Usuwa pozostałe znaki niedozwolone przez Supabase
+        }
+
+        // Weryfikacja konta admina
         async function checkAdminAccess() {
             const { data: { user } } = await supabaseClient.auth.getUser();
 
@@ -106,64 +119,92 @@
             loadPendingReviews();
         }
 
+        // Zapis produktu z automatyczną konwersją nazw plików/folderów
         async function saveProduct() {
+            const btn = document.getElementById('submit-btn');
             const title = document.getElementById('p-title').value;
             const price = parseFloat(document.getElementById('p-price').value);
             const oldPrice = parseFloat(document.getElementById('p-old-price').value) || null;
             const type = document.getElementById('p-type').value;
             const desc = document.getElementById('p-desc').value;
-            const slug = title.toLowerCase().replace(/ /g, '-').replace(/[^\w-]+/g, '');
+            const slug = cleanPath(title.toLowerCase());
 
             if (!title || isNaN(price)) {
                 alert("Podaj tytuł i cenę produktu.");
                 return;
             }
 
-            const imageFiles = document.getElementById('p-images').files;
-            let imageUrls = [];
-            for (let f of imageFiles) {
-                const { data } = await supabaseClient.storage.from('moje-pliki').upload(`produkty/${slug}/${f.name}`, f);
-                if (data) imageUrls.push(supabaseClient.storage.from('moje-pliki').getPublicUrl(data.path).data.publicUrl);
-            }
+            btn.disabled = true;
+            btn.innerText = "Trwa przesyłanie plików...";
 
-            const singleFile = document.getElementById('p-file').files[0];
-            const folderFiles = document.getElementById('p-folder').files;
+            try {
+                // Upload Zdjęć
+                const imageFiles = document.getElementById('p-images').files;
+                let imageUrls = [];
+                for (let f of imageFiles) {
+                    const cleanedName = cleanPath(f.name);
+                    const { data } = await supabaseClient.storage.from('moje-pliki').upload(`produkty/${slug}/${cleanedName}`, f);
+                    if (data) imageUrls.push(supabaseClient.storage.from('moje-pliki').getPublicUrl(data.path).data.publicUrl);
+                }
 
-            let digitalUrl = null, fileType = null;
+                // Upload Pojedynczego Pliku lub Folderu
+                const singleFile = document.getElementById('p-file').files[0];
+                const folderFiles = document.getElementById('p-folder').files;
 
-            if (folderFiles.length > 0) {
-                fileType = 'folder';
-                let uploadedCount = 0;
-                
-                for (let f of folderFiles) {
-                    const relativePath = f.webkitRelativePath || f.name;
-                    const { data } = await supabaseClient.storage.from('moje-pliki').upload(`produkty/${slug}/content/${relativePath}`, f);
-                    if (data && !digitalUrl) {
-                        digitalUrl = supabaseClient.storage.from('moje-pliki').getPublicUrl(`produkty/${slug}/content`).data.publicUrl;
+                let digitalUrl = null, fileType = null;
+
+                if (folderFiles.length > 0) {
+                    fileType = 'folder';
+                    
+                    for (let f of folderFiles) {
+                        const rawPath = f.webkitRelativePath || f.name;
+                        const cleanedPath = cleanPath(rawPath);
+
+                        const { data, error } = await supabaseClient.storage
+                            .from('moje-pliki')
+                            .upload(`produkty/${slug}/content/${cleanedPath}`, f);
+
+                        if (error) {
+                            console.error("Błąd pliku:", cleanedPath, error.message);
+                        } else if (!digitalUrl) {
+                            digitalUrl = supabaseClient.storage
+                                .from('moje-pliki')
+                                .getPublicUrl(`produkty/${slug}/content`).data.publicUrl;
+                        }
                     }
-                    uploadedCount++;
+                } else if (singleFile) {
+                    const cleanedName = cleanPath(singleFile.name);
+                    const { data } = await supabaseClient.storage
+                        .from('moje-pliki')
+                        .upload(`produkty/${slug}/content/${cleanedName}`, singleFile);
+                    
+                    if (data) {
+                        digitalUrl = supabaseClient.storage.from('moje-pliki').getPublicUrl(data.path).data.publicUrl;
+                        fileType = singleFile.name.split('.').pop();
+                    }
                 }
-            } else if (singleFile) {
-                const { data } = await supabaseClient.storage.from('moje-pliki').upload(`produkty/${slug}/content/${singleFile.name}`, singleFile);
-                if (data) {
-                    digitalUrl = supabaseClient.storage.from('moje-pliki').getPublicUrl(data.path).data.publicUrl;
-                    fileType = singleFile.name.split('.').pop();
+
+                // Zapis do bazy
+                const { error } = await supabaseClient.from('products').insert({
+                    title, slug, price, old_price_30_days: oldPrice, type, description: desc,
+                    images: imageUrls, file_url: digitalUrl, file_type: fileType
+                });
+
+                if (error) {
+                    alert("Błąd bazy danych: " + error.message);
+                } else {
+                    alert("Produkt został pomyślnie opublikowany!");
+                    location.reload();
                 }
-            }
-
-            const { error } = await supabaseClient.from('products').insert({
-                title, slug, price, old_price_30_days: oldPrice, type, description: desc,
-                images: imageUrls, file_url: digitalUrl, file_type: fileType
-            });
-
-            if (error) {
-                alert("Błąd podczas zapisywania produktu: " + error.message);
-            } else {
-                alert("Produkt został pomyślnie opublikowany!");
-                location.reload();
+            } catch (err) {
+                alert("Wystąpił błąd: " + err.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "Zapisz i opublikuj produkt";
             }
         }
 
+        // Kody rabatowe
         async function saveCoupon() {
             const code = document.getElementById('c-code').value.trim();
             const val = parseFloat(document.getElementById('c-val').value);
@@ -182,6 +223,7 @@
             else alert("Kod rabatowy został dodany!");
         }
 
+        // Opinie
         async function loadPendingReviews() {
             const { data: reviews } = await supabaseClient.from('reviews').select('*').eq('is_approved', false);
             const container = document.getElementById('admin-reviews');
