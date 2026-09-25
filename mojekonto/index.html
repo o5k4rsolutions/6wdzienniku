@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Moje Konto - 6 w Dzienniku</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body class="bg-[#FAFAFC] text-slate-800 min-h-screen flex flex-col justify-between">
+
+    <div id="auth-container" class="max-w-md mx-auto my-auto p-8 bg-white rounded-3xl border border-purple-100 shadow-xl w-full">
+        <h2 id="auth-title" class="text-2xl font-bold mb-6 text-center">Logowanie</h2>
+        <div class="space-y-4">
+            <input type="text" id="reg-name" placeholder="Imię i Nazwisko" class="w-full border p-3 rounded-xl hidden">
+            <input type="email" id="auth-email" placeholder="Adres e-mail" class="w-full border p-3 rounded-xl">
+            <input type="password" id="auth-pass" placeholder="Hasło" class="w-full border p-3 rounded-xl">
+            <button onclick="handleAuth()" id="auth-submit-btn" class="w-full bg-[#5B21B6] text-white py-3 rounded-xl font-bold">Zaloguj się</button>
+            <div class="flex justify-between text-xs text-[#5B21B6]">
+                <button onclick="toggleAuthMode('register')">Zarejestruj się</button>
+                <button onclick="resetPassword()">Zapomniałem hasła</button>
+            </div>
+        </div>
+    </div>
+
+    <main id="account-panel" class="max-w-6xl mx-auto px-6 py-12 w-full hidden flex-grow">
+        <div class="mb-8">
+            <h1 id="welcome-msg" class="text-2xl font-bold">Witaj!</h1>
+            <div id="last-order-box" class="mt-4 p-4 bg-purple-50 rounded-2xl text-sm border border-purple-100"></div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
+            <div class="space-y-2">
+                <button onclick="showTab('orders')" class="w-full text-left p-3 rounded-xl font-semibold bg-white border hover:bg-purple-50">Moje zamówienia</button>
+                <button onclick="showTab('access')" class="w-full text-left p-3 rounded-xl font-semibold bg-white border hover:bg-purple-50">Moje dostępy</button>
+                <button onclick="showTab('reviews')" class="w-full text-left p-3 rounded-xl font-semibold bg-white border hover:bg-purple-50">Moje opinie</button>
+                <button onclick="logout()" class="w-full text-left p-3 rounded-xl font-semibold text-red-500 bg-white border hover:bg-red-50">Wyloguj się</button>
+            </div>
+
+            <div class="md:col-span-3 bg-white p-6 rounded-2xl border border-purple-100 shadow-sm">
+                <div id="tab-orders" class="tab-content space-y-4"></div>
+                <div id="tab-access" class="tab-content space-y-4 hidden"></div>
+                <div id="tab-reviews" class="tab-content hidden">
+                    <h3 class="font-bold mb-4">Wystaw opinię do zakupionego produktu</h3>
+                    <form id="review-form" class="space-y-4">
+                        <select id="rev-product" class="w-full border p-3 rounded-xl"></select>
+                        <select id="rev-rating" class="w-full border p-3 rounded-xl">
+                            <option value="5">5 gwiazdek</option>
+                            <option value="4">4 gwiazdki</option>
+                            <option value="3">3 gwiazdki</option>
+                            <option value="2">2 gwiazdki</option>
+                            <option value="1">1 gwiazdka</option>
+                        </select>
+                        <textarea id="rev-comment" placeholder="Krótki opis" class="w-full border p-3 rounded-xl"></textarea>
+                        <button type="button" onclick="submitReview()" class="bg-[#5B21B6] text-white px-6 py-2 rounded-xl">Wyślij opinię</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const supabase = supabase.createClient("https://aouuylcmewkowgpijuci.supabase.co", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFvdXV5bGNtZXdrb3dncGlqdWNpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAzNTM3NDcsImV4cCI6MjEwNTkyOTc0N30.IFGjFzXYzJyN8QjKAs1Zoslyx7Nv3xFFv7SND7xsE0g");
+        let currentMode = 'login';
+
+        function toggleAuthMode(mode) {
+            currentMode = mode;
+            document.getElementById('reg-name').classList.toggle('hidden', mode !== 'register');
+            document.getElementById('auth-title').innerText = mode === 'register' ? 'Rejestracja' : 'Logowanie';
+            document.getElementById('auth-submit-btn').innerText = mode === 'register' ? 'Zarejestruj się' : 'Zaloguj się';
+        }
+
+        async function handleAuth() {
+            const email = document.getElementById('auth-email').value;
+            const password = document.getElementById('auth-pass').value;
+
+            if (currentMode === 'register') {
+                const name = document.getElementById('reg-name').value;
+                const { data, error } = await supabase.auth.signUp({ email, password });
+                if (!error) {
+                    await supabase.from('profiles').insert({ id: data.user.id, full_name: name, email });
+                    alert("Konto zostało utworzone!");
+                    location.reload();
+                }
+            } else {
+                const { error } = await supabase.auth.signInWithPassword({ email, password });
+                if (!error) location.reload();
+                else alert("Błędne dane logowania");
+            }
+        }
+
+        async function resetPassword() {
+            const email = document.getElementById('auth-email').value;
+            if (!email) return alert("Wpisz adres e-mail");
+            await supabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin + '/mojekonto' });
+            alert("Link do resetu hasła został wysłany na podany e-mail.");
+        }
+
+        async function initDashboard() {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return;
+
+            document.getElementById('auth-container').classList.add('hidden');
+            document.getElementById('account-panel').classList.remove('hidden');
+
+            const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single();
+            document.getElementById('welcome-msg').innerText = `Witaj, ${profile.full_name}`;
+
+            const { data: orders } = await supabase.from('orders').select('*').eq('user_id', user.id).order('created_at', { ascending: false });
+            if (orders.length > 0) {
+                const last = orders[0];
+                const extraCount = last.items.length - 1;
+                document.getElementById('last-order-box').innerHTML = `
+                    <strong>Twoje ostatnie zamówienie:</strong> ${last.order_number} - ${last.items[0].title} 
+                    ${extraCount > 0 ? `I (${extraCount}) produktów więcej` : ''} 
+                    <br><button onclick="showTab('orders')" class="text-[#5B21B6] underline text-xs mt-1">Przejdź do zamówień</button>
+                `;
+            }
+
+            document.getElementById('tab-orders').innerHTML = orders.map(o => `
+                <div class="border p-4 rounded-xl">
+                    <p class="font-bold">${o.order_number} (${new Date(o.created_at).toLocaleDateString()})</p>
+                    <p class="text-sm text-slate-500">Kwota: ${o.total_amount} PLN</p>
+                    <ul class="list-disc ml-5 text-xs text-slate-600 mt-2">
+                        ${o.items.map(i => `<li>${i.title} -${i.price} PLN</li>`).join('')}
+                    </ul>
+                </div>
+            `).join('');
+
+            const { data: access } = await supabase.from('user_access').select('*').eq('user_id', user.id);
+            document.getElementById('tab-access').innerHTML = access.map(a => `
+                <div class="border p-4 rounded-xl flex justify-between items-center">
+                    <div>
+                        <p class="font-bold">${a.file_title}</p>
+                        <p class="text-xs text-slate-400">Typ: ${a.file_type.toUpperCase()}</p>
+                    </div>
+                    <a href="${a.file_url}" target="_blank" download class="bg-[#5B21B6] text-white text-xs px-4 py-2 rounded-xl font-bold">Pobierz / Wyświetl</a>
+                </div>
+            `).join('');
+        }
+
+        function showTab(tab) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.getElementById(`tab-${tab}`).classList.remove('hidden');
+        }
+
+        async function logout() {
+            await supabase.auth.signOut();
+            window.location.href = "https://6wdzienniku.vercel.app";
+        }
+
+        initDashboard();
+    </script>
+</body>
+</html>
