@@ -1,0 +1,16 @@
+{
+  "rewrites": [
+    {
+      "source": "/produkty/:id/:slug",
+      "destination": "/produkty/index.html"
+    },
+    {
+      "source": "/mojekonto",
+      "destination": "/mojekonto/index.html"
+    },
+    {
+      "source": "/sklep",
+      "destination": "/sklep/index.html"
+    }
+  ]
+}
