@@ -235,7 +235,6 @@
     font-size:13px;
   }
 
-  /* Cookie banner */
   #cookie-banner{
     position:fixed;
     inset:0;
@@ -419,33 +418,33 @@
       <div class="review-track" id="review-track">
         <div class="review-card">
           <div class="review-stars">★★★★★</div>
-          <p>Zamówienie dotarło szybko, a jakość przerosła moje oczekiwania. Na pewno wracam po więcej.</p>
-          <div class="review-author">Kasia, Warszawa</div>
+          <p>Szybko dostałam ocekiwany test. Polecam . Na pewno wrócę po więcej.</p>
+          <div class="review-author">Anna</div>
         </div>
         <div class="review-card">
           <div class="review-stars">★★★★★</div>
-          <p>Świetny kontakt i pełen profesjonalizm od pierwszej wiadomości. Polecam każdemu.</p>
-          <div class="review-author">Michał, Kraków</div>
+          <p>Świetny kontakt i pełen profesjonalizm. Polecam każdemu.</p>
+          <div class="review-author">Michał</div>
         </div>
         <div class="review-card">
-          <div class="review-stars">★★★★★</div>
+          <div class="review-stars">★★★★</div>
           <p>To już moje kolejne zamówienie i za każdym razem jestem równie zadowolona.</p>
-          <div class="review-author">Ola, Gdańsk</div>
+          <div class="review-author">Ola</div>
         </div>
         <div class="review-card">
           <div class="review-stars">★★★★★</div>
-          <p>Wszystko przebiegło sprawnie, a wsparcie odpowiadało na każde pytanie tego samego dnia.</p>
-          <div class="review-author">Tomek, Wrocław</div>
+          <p>Wszystko przebiegło sprawnie</p>
+          <div class="review-author">Tomek</div>
         </div>
         <div class="review-card">
           <div class="review-stars">★★★★★</div>
-          <p>Bardzo solidne wykonanie i pełna zgodność z tym, co było obiecane. Polecam bez wahania.</p>
-          <div class="review-author">Ania, Poznań</div>
+          <p>Pan był bardzo miły i uczciwy. Polecam bez wahania.</p>
+          <div class="review-author">Maja</div>
         </div>
         <div class="review-card">
-          <div class="review-stars">★★★★★</div>
-          <p>Korzystam już trzeci raz i za każdym razem jestem pod wrażeniem jakości obsługi.</p>
-          <div class="review-author">Bartek, Łódź</div>
+          <div class="review-stars">★★★★</div>
+          <p>Korzystam już trzeci raz z tej platformy i za każdym razem jestem pod wrażeniem jakości obsługi. Minus -1 gwiazdka za brak numeru telefonu, szkoda bo łatwiej by było się dogadać</p>
+          <div class="review-author">Bartek</div>
         </div>
       </div>
     </div>
@@ -453,10 +452,9 @@
 </main>
 
 <footer>
-  © 2026 6 w Dzienniku
+  © 2025-2026 6 w Dzienniku
 </footer>
 
-<!-- Cookie banner -->
 <div id="cookie-banner">
   <div class="cookie-card" id="cookie-card">
     <h2>Ustawienia plików cookie</h2>
@@ -492,7 +490,6 @@
     });
   }catch(e){}
 
-  // Karuzela opinii - przesuwa się o jedną kartę co 10 sekund
   (function(){
     var viewport = document.querySelector('.review-viewport');
     var track = document.getElementById('review-track');
@@ -507,7 +504,6 @@
       return 3;
     }
 
-    // Klonujemy pierwsze karty na koniec, żeby uzyskać płynną, zapętloną pętlę
     var clones = originalCards.slice(0, visibleCount()).map(function(c){ return c.cloneNode(true); });
     clones.forEach(function(c){ track.appendChild(c); });
 
