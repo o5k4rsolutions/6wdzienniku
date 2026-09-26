@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="pl" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pomoc - 6WDzienniku</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="icon" type="image/x-icon" href="https://6wdzienniku.vercel.app/6-content/logo_favicon_6.svg">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans+Condensed:ital,wght@0,300;0,700;1,300&family=Open+Sans:ital,wght@0,300;0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brandViolet: '#5B21B6',
+                        brandPink: '#EC4899',
+                    },
+                    fontFamily: {
+                        sans: ['"Open Sans"', 'sans-serif'],
+                        condensed: ['"Open Sans Condensed"', 'sans-serif'],
+                    },
+                    borderRadius: {
+                        'custom': '10px',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            font-family: 'Open Sans', sans-serif;
+            background-color: #FAFAFC;
+            color: #1F2937;
+            overflow-x: hidden;
+        }
+
+        h1, h2, h3, .font-condensed {
+            font-family: 'Open Sans Condensed', sans-serif;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .btn-sweep {
+            position: relative;
+            z-index: 1;
+            overflow: hidden;
+            transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .btn-sweep::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -101%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #5B21B6 0%, #EC4899 100%);
+            transition: left 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: -1;
+            border-radius: inherit;
+        }
+
+        .btn-sweep:hover {
+            transform: scale(1.04);
+            color: #ffffff !important;
+            border-color: transparent !important;
+            box-shadow: 0 10px 25px -5px rgba(236, 72, 153, 0.3);
+        }
+
+        .btn-sweep:hover::before {
+            left: 0;
+        }
+
+        .text-gradient {
+            background: linear-gradient(135deg, #5B21B6 0%, #EC4899 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between">
+
+    <header class="w-full bg-white border-b border-gray-200 sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex flex-col md:flex-row items-center justify-between gap-4">
+            <div class="flex items-center justify-center md:justify-start w-full md:w-auto">
+                <a href="https://6wdzienniku.vercel.app/" class="inline-block transition-transform duration-300 hover:scale-105">
+                    <img src="https://6wdzienniku.vercel.app/6-content/logo_6wdzienn_kolor.png" alt="6 w dzienniku Logo" class="h-16 sm:h-20 object-contain mx-auto">
+                </a>
+            </div>
+            <div class="flex flex-wrap items-center justify-center md:justify-end gap-3 sm:gap-6 w-full md:w-auto text-xs sm:text-sm">
+                <div class="flex items-center space-x-2">
+                    <a href="https://6wdzienniku.vercel.app/" class="btn-sweep px-3 sm:px-4 py-2 border border-brandViolet text-brandViolet font-semibold rounded-custom text-xs sm:text-sm bg-white shadow-sm">
+                        <span>Strona główna</span>
+                    </a>
+                    <a href="https://6wdzienniku.vercel.app/sklep" class="btn-sweep px-3 sm:px-4 py-2 border border-brandPink text-brandPink font-semibold rounded-custom text-xs sm:text-sm bg-white shadow-sm">
+                        <span>Sklep</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-grow py-12 px-4 sm:px-6">
+        <div class="max-w-4xl mx-auto text-center space-y-6">
+            
+            <div class="bg-white p-8 rounded-2xl shadow-sm border border-gray-200 space-y-4">
+                <h1 class="text-3xl sm:text-4xl font-condensed text-gray-900">Potrzebujesz pomocy? <span class="text-gradient">Jesteśmy tutaj!</span></h1>
+                <p class="text-gray-600 text-base sm:text-lg max-w-2xl mx-auto font-sans leading-relaxed">
+                    Masz pytania dotyczące materiałów edukacyjnych lub potrzebujesz zgłosić sprawę do naszego Biura Obsługi Klienta? Skorzystaj z naszego inteligentnego bota pomocy, który odpowie na Twoje pytania lub przekaże zgłoszenie bezpośrednio do nas.
+                </p>
+                <div class="pt-2">
+                    <button onclick="openChatInterface()" class="btn-sweep px-8 py-4 bg-white border-2 border-brandViolet text-brandViolet font-bold rounded-custom text-base shadow-md">
+                        <span>Otwórz Czat</span>
+                    </button>
+                </div>
+            </div>
+
+            <div id="chat-container" class="hidden bg-white rounded-2xl shadow-xl border border-gray-200 flex flex-col h-[600px] overflow-hidden text-left transition-all duration-300">
+                <div class="bg-gradient-to-r from-brandViolet to-brandPink text-white p-4 sm:px-6 flex items-center justify-between">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-3.5 h-3.5 bg-green-400 rounded-full animate-pulse"></div>
+                        <span class="font-condensed font-bold tracking-wider text-lg">Asystent Pomocy 6WDzienniku</span>
+                    </div>
+                    <button onclick="closeChatInterface()" class="text-white hover:text-gray-200 text-2xl font-bold">&times;</button>
+                </div>
+
+                <div id="chat-messages" class="flex-1 p-4 sm:p-6 overflow-y-auto space-y-4 bg-gray-50 text-sm font-sans">
+                    <div class="flex items-start">
+                        <div class="bg-purple-100 text-brandViolet p-3.5 rounded-custom max-w-[85%] sm:max-w-[75%] leading-relaxed shadow-sm">
+                            Cześć! W czym mogę Ci dzisiaj pomóc?
+                        </div>
+                    </div>
+                </div>
+
+                <div class="p-4 sm:p-5 bg-white border-t border-gray-200 flex items-center gap-3">
+                    <input type="text" id="chat-input" placeholder="Wpisz swoją wiadomość..." class="flex-1 px-4 py-3 border border-gray-300 rounded-custom text-sm focus:outline-none focus:border-brandViolet shadow-sm" onkeydown="if(event.key === 'Enter') sendChatMessage()">
+                    <button onclick="sendChatMessage()" class="btn-sweep px-6 py-3 bg-white border-2 border-brandViolet text-brandViolet font-bold rounded-custom text-sm shadow-md">
+                        <span>Wyślij</span>
+                    </button>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+ <footer class="bg-white border-t border-gray-200 py-8 text-center text-sm text-gray-500">
+        <div class="max-w-6xl mx-auto px-4 space-y-1">
+            <p>© 2026 <b>6WDzienniku</b></p>
+            <p>Wszelkie prawa zastrzeżone.</p>
+        </div>
+    </footer>
+
+    <script>
+        function openChatInterface() {
+            const chatContainer = document.getElementById('chat-container');
+            chatContainer.classList.remove('hidden');
+            chatContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        function closeChatInterface() {
+            const chatContainer = document.getElementById('chat-container');
+            chatContainer.classList.add('hidden');
+        }
+
+        async function sendChatMessage() {
+            const input = document.getElementById('chat-input');
+            const messagesContainer = document.getElementById('chat-messages');
+            const text = input.value.trim();
+            if(!text) return;
+
+            messagesContainer.innerHTML += `<div class="flex justify-end"><div class="bg-brandViolet text-white p-3.5 rounded-custom max-w-[85%] sm:max-w-[75%] leading-relaxed shadow-sm">${text}</div></div>`;
+            input.value = '';
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+
+            try {
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: text })
+                });
+                const data = await response.json();
+
+                messagesContainer.innerHTML += `<div class="flex items-start"><div class="bg-purple-50 text-gray-900 border border-purple-100 p-3.5 rounded-custom max-w-[85%] sm:max-w-[75%] leading-relaxed shadow-sm">${data.reply}</div></div>`;
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            } catch (err) {
+                messagesContainer.innerHTML += `<div class="flex items-start"><div class="bg-red-50 text-red-700 p-3.5 rounded-custom max-w-[85%] sm:max-w-[75%] leading-relaxed shadow-sm">Wystąpił błąd połączenia z serwerem. Spróbuj ponownie później.</div></div>`;
+            }
+        }
+    </script>
+</body>
+</html>
