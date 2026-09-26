@@ -45,11 +45,12 @@
                     <input type="email" id="l-email" placeholder="Adres e-mail" class="w-full p-3 border rounded-custom text-xs" required>
                     <input type="password" id="l-password" placeholder="Hasło" class="w-full p-3 border rounded-custom text-xs" required>
                     <button type="submit" class="w-full py-3 bg-brandViolet text-white font-bold rounded-custom text-xs uppercase">Zaloguj się</button>
+                    
+                    <div class="flex justify-between text-xs text-gray-500 pt-2">
+                        <button type="button" onclick="toggleForm('register')" class="hover:underline">Brak konta? Zarejestruj się</button>
+                        <button type="button" onclick="toggleForm('forgot')" class="hover:underline">Zapomniałeś hasła?</button>
+                    </div>
                 </form>
-                <div class="flex justify-between text-xs text-gray-500 pt-2">
-                    <button onclick="toggleForm('register')" class="hover:underline">Brak konta? Zarejestruj się</button>
-                    <button onclick="toggleForm('forgot')" class="hover:underline">Zapomniałeś hasła?</button>
-                </div>
             </div>
 
             <div id="form-register" class="space-y-4 hidden">
@@ -59,10 +60,11 @@
                     <input type="email" id="r-email" placeholder="Adres e-mail" class="w-full p-3 border rounded-custom text-xs" required>
                     <input type="password" id="r-password" placeholder="Hasło (min. 6 znaków)" class="w-full p-3 border rounded-custom text-xs" required minlength="6">
                     <button type="submit" class="w-full py-3 bg-brandPink text-white font-bold rounded-custom text-xs uppercase">Zarejestruj się</button>
+                    
+                    <div class="text-center text-xs text-gray-500 pt-2">
+                        <button type="button" onclick="toggleForm('login')" class="hover:underline">Masz już konto? Zaloguj się</button>
+                    </div>
                 </form>
-                <div class="text-center text-xs text-gray-500 pt-2">
-                    <button onclick="toggleForm('login')" class="hover:underline">Masz już konto? Zaloguj się</button>
-                </div>
             </div>
 
             <div id="form-forgot" class="space-y-4 hidden">
@@ -70,14 +72,19 @@
                 <form onsubmit="handleForgot(event)" class="space-y-3">
                     <input type="email" id="f-email" placeholder="Wprowadź swój e-mail" class="w-full p-3 border rounded-custom text-xs" required>
                     <button type="submit" class="w-full py-3 bg-gray-800 text-white font-bold rounded-custom text-xs uppercase">Wyślij link resetujący</button>
+                    
+                    <div class="text-center text-xs text-gray-500 pt-2">
+                        <button type="button" onclick="toggleForm('login')" class="hover:underline">Wróć do logowania</button>
+                    </div>
                 </form>
-                <div class="text-center text-xs text-gray-500 pt-2">
-                    <button onclick="toggleForm('login')" class="hover:underline">Wróć do logowania</button>
-                </div>
             </div>
 
         </div>
     </main>
+
+    <footer class="bg-white border-t py-6 text-center text-xs text-gray-500">
+        © 2026 <b>6WDzienniku</b>
+    </footer>
 
     <script>
         const SUPABASE_URL = "https://fxksikgdberwgttvglko.supabase.co";
@@ -113,11 +120,17 @@
             const fullName = document.getElementById('r-name').value;
 
             const { data, error } = await supabase.auth.signUp({
-                email, password, options: { data: { full_name: fullName } }
+                email, 
+                password, 
+                options: { data: { full_name: fullName } }
             });
 
-            if (error) { showToast(error.message); } 
-            else { showToast('Konto zostało utworzone! Zaloguj się.'); toggleForm('login'); }
+            if (error) { 
+                showToast(error.message); 
+            } else { 
+                showToast('Konto zostało utworzone! Zaloguj się.'); 
+                toggleForm('login'); 
+            }
         }
 
         async function handleForgot(e) {
@@ -126,8 +139,12 @@
             const { error } = await supabase.auth.resetPasswordForEmail(email, {
                 redirectTo: 'https://6wdzienniku.vercel.app/mojekonto'
             });
-            if (error) { showToast(error.message); } 
-            else { showToast('Instrukcje wysłano na e-mail.'); toggleForm('login'); }
+            if (error) { 
+                showToast(error.message); 
+            } else { 
+                showToast('Instrukcje wysłano na e-mail.'); 
+                toggleForm('login'); 
+            }
         }
     </script>
 </body>
