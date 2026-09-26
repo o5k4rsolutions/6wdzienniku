@@ -22,6 +22,14 @@
     <style>
         body { font-family: 'Open Sans', sans-serif; background-color: #FAFAFC; }
         h1, h2, .font-condensed { font-family: 'Open Sans Condensed', sans-serif; font-weight: 700; text-transform: uppercase; }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .animate-spin-fast {
+            animation: spin 0.6s linear infinite;
+        }
     </style>
 </head>
 <body class="min-h-screen flex flex-col justify-between">
@@ -32,20 +40,22 @@
 
     <header class="w-full bg-white border-b py-4">
         <div class="max-w-7xl mx-auto px-4 text-center">
-            <a href="/"><span class="text-2xl font-bold text-brandViolet font-condensed">6WDZIENNIKU</span></a>
+            <a href="https://6wdzienniku.vercel.app/"><img src="https://6wdzienniku.vercel.app/6-content/logo_6wdzienn_kolor.png" class="h-16 mx-auto" alt="6WDzienniku"></a>
         </div>
     </header>
 
     <main class="flex-grow flex items-center justify-center p-4">
         <div class="bg-white p-8 rounded-custom border border-gray-200 shadow-md w-full max-w-md">
             
-            <!-- FORMULARZ LOGOWANIA -->
             <div id="form-login" class="space-y-4">
                 <h1 class="text-2xl text-center text-gray-900">Zaloguj się</h1>
                 <form onsubmit="handleLogin(event)" class="space-y-3">
                     <input type="email" id="l-email" placeholder="Adres e-mail" class="w-full p-3 border rounded-custom text-xs" required>
                     <input type="password" id="l-password" placeholder="Hasło" class="w-full p-3 border rounded-custom text-xs" required>
-                    <button type="submit" class="w-full py-3 bg-brandViolet text-white font-bold rounded-custom text-xs uppercase">Zaloguj się</button>
+                    <button type="submit" id="btn-login" class="w-full py-3 bg-brandViolet text-white font-bold rounded-custom text-xs uppercase flex items-center justify-center gap-2 transition hover:bg-purple-900">
+                        <span class="btn-text">Zaloguj się</span>
+                        <svg class="spinner hidden w-4 h-4 text-white animate-spin-fast" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                    </button>
                     
                     <div class="flex justify-between text-xs text-gray-500 pt-2">
                         <button type="button" onclick="window.toggleForm('rejestracja')" class="hover:underline">Brak konta? Zarejestruj się</button>
@@ -54,14 +64,16 @@
                 </form>
             </div>
 
-            <!-- FORMULARZ REJESTRACJI -->
             <div id="form-rejestracja" class="space-y-4 hidden">
                 <h1 class="text-2xl text-center text-gray-900">Załóż konto</h1>
                 <form onsubmit="handleRegister(event)" class="space-y-3">
                     <input type="text" id="r-name" placeholder="Imię i nazwisko" class="w-full p-3 border rounded-custom text-xs" required>
                     <input type="email" id="r-email" placeholder="Adres e-mail" class="w-full p-3 border rounded-custom text-xs" required>
                     <input type="password" id="r-password" placeholder="Hasło (min. 6 znaków)" class="w-full p-3 border rounded-custom text-xs" required minlength="6">
-                    <button type="submit" class="w-full py-3 bg-brandPink text-white font-bold rounded-custom text-xs uppercase">Zarejestruj się</button>
+                    <button type="submit" id="btn-register" class="w-full py-3 bg-brandPink text-white font-bold rounded-custom text-xs uppercase flex items-center justify-center gap-2 transition hover:bg-pink-600">
+                        <span class="btn-text">Zarejestruj się</span>
+                        <svg class="spinner hidden w-4 h-4 text-white animate-spin-fast" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                    </button>
                     
                     <div class="text-center text-xs text-gray-500 pt-2">
                         <button type="button" onclick="window.toggleForm('login')" class="hover:underline">Masz już konto? Zaloguj się</button>
@@ -69,12 +81,14 @@
                 </form>
             </div>
 
-            <!-- FORMULARZ RESETU HASŁA -->
             <div id="form-reset" class="space-y-4 hidden">
                 <h1 class="text-2xl text-center text-gray-900">Odzyskaj hasło</h1>
                 <form onsubmit="handleForgot(event)" class="space-y-3">
                     <input type="email" id="f-email" placeholder="Wprowadź swój e-mail" class="w-full p-3 border rounded-custom text-xs" required>
-                    <button type="submit" class="w-full py-3 bg-gray-800 text-white font-bold rounded-custom text-xs uppercase">Wyślij link resetujący</button>
+                    <button type="submit" id="btn-forgot" class="w-full py-3 bg-gray-800 text-white font-bold rounded-custom text-xs uppercase flex items-center justify-center gap-2 transition hover:bg-black">
+                        <span class="btn-text">Wyślij link resetujący</span>
+                        <svg class="spinner hidden w-4 h-4 text-white animate-spin-fast" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                    </button>
                     
                     <div class="text-center text-xs text-gray-500 pt-2">
                         <button type="button" onclick="window.toggleForm('login')" class="hover:underline">Wróć do logowania</button>
@@ -85,8 +99,11 @@
         </div>
     </main>
 
-    <footer class="bg-white border-t py-6 text-center text-xs text-gray-500">
-        © 2026 <b>6WDzienniku</b>
+    <footer class="bg-white border-t border-gray-200 py-8 text-center text-sm text-gray-500">
+        <div class="max-w-6xl mx-auto px-4 space-y-1">
+            <p>© 2026 <b>6WDzienniku</b></p>
+            <p>Wszelkie prawa zastrzeżone.</p>
+        </div>
     </footer>
 
     <script>
@@ -100,6 +117,22 @@
             document.getElementById('toast-msg').innerText = m;
             t.classList.remove('translate-x-full');
             setTimeout(() => t.classList.add('translate-x-full'), 3000);
+        }
+
+        function setLoading(btnId, isLoading) {
+            const btn = document.getElementById(btnId);
+            if (!btn) return;
+            const spinner = btn.querySelector('.spinner');
+            const text = btn.querySelector('.btn-text');
+            
+            btn.disabled = isLoading;
+            if (isLoading) {
+                btn.classList.add('opacity-75', 'cursor-not-allowed');
+                if (spinner) spinner.classList.remove('hidden');
+            } else {
+                btn.classList.remove('opacity-75', 'cursor-not-allowed');
+                if (spinner) spinner.classList.add('hidden');
+            }
         }
 
         window.toggleForm = function(formName) {
@@ -129,16 +162,25 @@
 
         async function handleLogin(e) {
             e.preventDefault();
+            setLoading('btn-login', true);
+
             const email = document.getElementById('l-email').value;
             const password = document.getElementById('l-password').value;
 
             const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
-            if (error) { showToast(error.message); } 
-            else { window.location.href = '/mojekonto'; }
+            
+            if (error) { 
+                showToast(error.message); 
+                setLoading('btn-login', false);
+            } else { 
+                window.location.href = '/mojekonto'; 
+            }
         }
 
         async function handleRegister(e) {
             e.preventDefault();
+            setLoading('btn-register', true);
+
             const email = document.getElementById('r-email').value;
             const password = document.getElementById('r-password').value;
             const fullName = document.getElementById('r-name').value;
@@ -148,6 +190,8 @@
                 password, 
                 options: { data: { full_name: fullName } }
             });
+
+            setLoading('btn-register', false);
 
             if (error) { 
                 showToast(error.message); 
@@ -159,10 +203,15 @@
 
         async function handleForgot(e) {
             e.preventDefault();
+            setLoading('btn-forgot', true);
+
             const email = document.getElementById('f-email').value;
             const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
                 redirectTo: 'https://6wdzienniku.vercel.app/mojekonto'
             });
+
+            setLoading('btn-forgot', false);
+
             if (error) { 
                 showToast(error.message); 
             } else { 
