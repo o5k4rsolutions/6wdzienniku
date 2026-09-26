@@ -46,7 +46,7 @@ module.exports = async (req, res) => {
       throw new Error('Nie udało się pobrać danych profilu użytkownika.');
     }
 
-    // 2. Obliczenie wartości produktów (subtotal)
+    // 2. Obliczenie subtotal
     let subtotal = 0;
     for (const item of items) {
       const { data: product } = await supabase
@@ -63,7 +63,6 @@ module.exports = async (req, res) => {
     let discountPercent = 0;
     let appliedCouponId = null;
 
-    // 3. Weryfikacja i obsługa kuponu rabatowego
     if (couponCode) {
       const { data: coupon } = await supabase
         .from('coupons')
@@ -81,7 +80,7 @@ module.exports = async (req, res) => {
     const finalAmount = Math.max(0, subtotal - discountAmount);
     const amountInCents = Math.round(finalAmount * 100);
 
-    // 4. Utworzenie zamówienia w bazie z pełnymi danymi kuponu i e-maila
+    // 3. Utworzenie zamówienia w bazie
     const { data: order, error: orderError } = await supabase
       .from('orders')
       .insert({
@@ -101,11 +100,12 @@ module.exports = async (req, res) => {
       throw new Error(`Błąd zapisu zamówienia: ${orderError.message}`);
     }
 
-    // 5. Utworzenie PaymentIntent w Stripe
+    // 4. Utworzenie PaymentIntent w Stripe (przekazujemy e-mail klienta, co eliminuje pytania o e-mail przy BLIKu/portfelach)
     const paymentIntent = await stripe.paymentIntents.create({
       amount: amountInCents,
       currency: 'pln',
       automatic_payment_methods: { enabled: true },
+      receipt_email: profile.email, // Automatycznie przypisuje e-mail do płatności
       metadata: {
         orderId: order.id,
         userId: userId
