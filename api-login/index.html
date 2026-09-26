@@ -32,9 +32,9 @@
         }
     </style>
 </head>
-<body class="min-h-screen flex flex-col justify-between">
+<body class="min-h-screen flex flex-col justify-between overflow-x-hidden">
 
-    <div id="toast" class="fixed top-5 right-5 z-50 transform translate-x-full transition-transform duration-300 bg-gray-900 text-white px-5 py-3 rounded-custom shadow-xl border border-purple-500/30 text-xs">
+    <div id="toast" class="fixed top-5 right-5 z-50 opacity-0 pointer-events-none transition-opacity duration-300 bg-gray-900 text-white px-5 py-3 rounded-custom shadow-xl border border-purple-500/30 text-xs">
         <span id="toast-msg">Powiadomienie</span>
     </div>
 
@@ -115,8 +115,13 @@
         function showToast(m) {
             const t = document.getElementById('toast');
             document.getElementById('toast-msg').innerText = m;
-            t.classList.remove('translate-x-full');
-            setTimeout(() => t.classList.add('translate-x-full'), 3000);
+            t.classList.remove('opacity-0', 'pointer-events-none');
+            t.classList.add('opacity-100');
+            
+            setTimeout(() => {
+                t.classList.remove('opacity-100');
+                t.classList.add('opacity-0', 'pointer-events-none');
+            }, 3000);
         }
 
         function setLoading(btnId, isLoading) {
