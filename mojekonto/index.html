@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Moje Konto - 6WDzienniku</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="icon" type="image/x-icon" href="https://6wdzienniku.vercel.app/6-content/logo_favicon_6.svg">
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans+Condensed:ital,wght@0,300;0,700;1,300&family=Open+Sans:ital,wght@0,300;0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: { brandViolet: '#5B21B6', brandPink: '#EC4899' },
+                    fontFamily: { sans: ['"Open Sans"', 'sans-serif'], condensed: ['"Open Sans Condensed"', 'sans-serif'] },
+                    borderRadius: { 'custom': '10px' }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Open Sans', sans-serif; background-color: #FAFAFC; color: #1F2937; }
+        h1, h2, h3, .font-condensed { font-family: 'Open Sans Condensed', sans-serif; font-weight: 700; text-transform: uppercase; }
+        .text-gradient { background: linear-gradient(135deg, #5B21B6 0%, #EC4899 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .tab-btn.active { background-color: #5B21B6; color: white; border-color: #5B21B6; }
+        .tab-btn.active svg { stroke: white; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between">
+
+    <div id="toast" class="fixed top-5 right-5 z-50 transform translate-x-full transition-transform duration-300 bg-gray-900 text-white px-5 py-3 rounded-custom shadow-xl border border-purple-500/30 flex items-center gap-3">
+        <span id="toast-message" class="text-sm font-medium">Powiadomienie</span>
+    </div>
+
+    <header class="w-full bg-white border-b border-gray-200 sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
+            <a href="https://6wdzienniku.vercel.app/">
+                <img src="https://6wdzienniku.vercel.app/6-content/logo_6wdzienn_kolor.png" alt="6 w dzienniku" class="h-16 sm:h-20 object-contain">
+            </a>
+            <a href="/sklep" class="text-sm font-semibold text-brandViolet hover:underline">Przejdź do sklepu</a>
+        </div>
+    </header>
+
+    <main class="flex-grow max-w-7xl mx-auto px-4 sm:px-6 py-10 w-full">
+        <div class="bg-white p-6 rounded-custom border border-gray-200 shadow-sm mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div>
+                <h1 class="text-3xl font-condensed text-gray-900">Witaj, <span id="user-name" class="text-gradient">Użytkowniku</span></h1>
+                <div id="last-order-info" class="text-xs text-gray-500 mt-1">Brak ostatnich zamówień</div>
+            </div>
+            <button onclick="switchTab('orders')" class="px-4 py-2 border border-brandViolet text-brandViolet font-semibold rounded-custom text-xs hover:bg-purple-50 transition">
+                Przejdź do zamówień
+            </button>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-12 gap-8">
+            <aside class="md:col-span-3 space-y-2">
+                <button onclick="switchTab('orders')" id="tab-btn-orders" class="tab-btn active w-full flex items-center gap-3 px-4 py-3 rounded-custom border border-gray-200 text-sm font-semibold transition text-left">
+                    <svg class="w-5 h-5 stroke-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path></svg>
+                    Moje zamówienia
+                </button>
+                <button onclick="switchTab('accesses')" id="tab-btn-accesses" class="tab-btn w-full flex items-center gap-3 px-4 py-3 rounded-custom border border-gray-200 text-sm font-semibold transition text-left">
+                    <svg class="w-5 h-5 stroke-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                    Moje dostępy
+                </button>
+                <button onclick="switchTab('reviews')" id="tab-btn-reviews" class="tab-btn w-full flex items-center gap-3 px-4 py-3 rounded-custom border border-gray-200 text-sm font-semibold transition text-left">
+                    <svg class="w-5 h-5 stroke-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"></path></svg>
+                    Moje opinie
+                </button>
+                <button onclick="logout()" class="w-full flex items-center gap-3 px-4 py-3 rounded-custom border border-red-200 text-red-600 text-sm font-semibold hover:bg-red-50 transition text-left mt-4">
+                    <svg class="w-5 h-5 stroke-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+                    Wyloguj się
+                </button>
+            </aside>
+
+            <section class="md:col-span-9 bg-white p-6 rounded-custom border border-gray-200 shadow-sm">
+                <div id="tab-orders" class="space-y-4">
+                    <h2 class="text-xl font-condensed mb-4 border-b pb-2">Moje Zamówienia</h2>
+                    <div id="orders-list" class="space-y-3"><p class="text-xs text-gray-400">Ładowanie...</p></div>
+                </div>
+
+                <div id="tab-accesses" class="space-y-4 hidden">
+                    <h2 class="text-xl font-condensed mb-4 border-b pb-2">Moje Dostępy (Pliki i Foldery)</h2>
+                    <div id="accesses-list" class="grid grid-cols-1 sm:grid-cols-2 gap-4"><p class="text-xs text-gray-400">Ładowanie...</p></div>
+                </div>
+
+                <div id="tab-reviews" class="space-y-4 hidden">
+                    <h2 class="text-xl font-condensed mb-4 border-b pb-2">Moje Opinie</h2>
+                    <form id="review-form" onsubmit="submitReview(event)" class="bg-gray-50 p-4 rounded-custom space-y-3 mb-6">
+                        <h3 class="font-bold text-sm">Wystaw opinię do zamówienia</h3>
+                        <select id="review-product-select" class="w-full text-xs p-2 border rounded-custom" required></select>
+                        <select id="review-rating" class="w-full text-xs p-2 border rounded-custom" required>
+                            <option value="5">5 gwiazdek ★★★★★</option>
+                            <option value="4">4 gwiazdki ★★★★☆</option>
+                            <option value="3">3 gwiazdki ★★★☆☆</option>
+                            <option value="2">2 gwiazdki ★★☆☆☆</option>
+                            <option value="1">1 gwiazdka ★☆☆☆☆</option>
+                        </select>
+                        <textarea id="review-comment" placeholder="Krótki opis opinii..." class="w-full text-xs p-2 border rounded-custom h-20" required></textarea>
+                        <button type="submit" class="px-4 py-2 bg-brandViolet text-white text-xs font-bold rounded-custom">Dodaj opinię</button>
+                    </form>
+                    <div id="reviews-list" class="space-y-3"></div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <footer class="bg-white border-t border-gray-200 py-8 text-center text-sm text-gray-500">
+        <div class="max-w-6xl mx-auto px-4 space-y-1">
+            <p>© 2026 <b>6WDzienniku</b></p>
+            <p>Wszelkie prawa zastrzeżone.</p>
+        </div>
+    </footer>
+
+    <script>
+        const SUPABASE_URL = "https://twoj-projekt.supabase.co";
+        const SUPABASE_ANON_KEY = "twoj-anon-key";
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        let currentUser = null;
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toast-message').innerText = msg;
+            toast.classList.remove('translate-x-full');
+            setTimeout(() => toast.classList.add('translate-x-full'), 3000);
+        }
+
+        function switchTab(tabName) {
+            ['orders', 'accesses', 'reviews'].forEach(t => {
+                document.getElementById(`tab-${t}`).classList.add('hidden');
+                document.getElementById(`tab-btn-${t}`).classList.remove('active');
+            });
+            document.getElementById(`tab-${tabName}`).classList.remove('hidden');
+            document.getElementById(`tab-btn-${tabName}`).classList.add('active');
+        }
+
+        async function initAccount() {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) {
+                window.location.href = '/api-login/?login';
+                return;
+            }
+            currentUser = session.user;
+
+            const { data: profile } = await supabase.from('profiles').select('*').eq('id', currentUser.id).single();
+            document.getElementById('user-name').innerText = profile?.full_name || currentUser.email;
+
+            loadOrders();
+            loadAccesses();
+            loadReviews();
+        }
+
+        async function loadOrders() {
+            const { data: orders } = await supabase.from('orders').select('*').eq('user_id', currentUser.id).order('created_at', { ascending: false });
+            const list = document.getElementById('orders-list');
+
+            if (!orders || orders.length === 0) {
+                list.innerHTML = '<p class="text-xs text-gray-500">Brak zamówień.</p>';
+                return;
+            }
+
+            const lastOrder = orders[0];
+            const lastItems = typeof lastOrder.items === 'string' ? JSON.parse(lastOrder.items) : lastOrder.items;
+            const extraCount = lastItems.length > 1 ? ` i ${lastItems.length - 1} produktów więcej` : '';
+            document.getElementById('last-order-info').innerText = `Twoje ostatnie zamówienie: #${lastOrder.order_number} (${lastItems[0]?.title}${extraCount})`;
+
+            list.innerHTML = orders.map(o => {
+                const items = typeof o.items === 'string' ? JSON.parse(o.items) : o.items;
+                return `
+                    <div class="p-4 border rounded-custom flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                        <div>
+                            <span class="font-bold text-sm">#${o.order_number}</span>
+                            <span class="text-xs text-gray-400 ml-2">${new Date(o.created_at).toLocaleDateString('pl-PL')}</span>
+                            <p class="text-xs text-gray-600 mt-1">${items.map(i => `${i.title} (x${i.quantity})`).join(', ')}</p>
+                        </div>
+                        <div class="text-right">
+                            <span class="font-bold text-brandViolet">${parseFloat(o.total_amount).toFixed(2)} PLN</span>
+                            <span class="block text-[10px] uppercase font-bold text-green-600">${o.status}</span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        async function loadAccesses() {
+            const { data: accesses } = await supabase.from('user_accesses').select('*').eq('user_id', currentUser.id);
+            const list = document.getElementById('accesses-list');
+
+            if (!accesses || accesses.length === 0) {
+                list.innerHTML = '<p class="text-xs text-gray-500 col-span-full">Brak dostępu do plików.</p>';
+                return;
+            }
+
+            list.innerHTML = accesses.map(a => `
+                <div class="p-4 border border-purple-100 bg-purple-50/30 rounded-custom space-y-2">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs uppercase font-bold px-2 py-0.5 bg-purple-200 text-purple-800 rounded">${a.file_type}</span>
+                    </div>
+                    <h4 class="font-bold text-sm text-gray-900">${a.title}</h4>
+                    <a href="${a.download_url}" target="_blank" download class="inline-flex items-center gap-1.5 text-xs font-bold text-brandViolet hover:underline pt-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                        Pobierz
+                    </a>
+                </div>
+            `).join('');
+        }
+
+        async function loadReviews() {
+            const { data: reviews } = await supabase.from('reviews').select('*').eq('user_id', currentUser.id);
+            const list = document.getElementById('reviews-list');
+
+            list.innerHTML = (reviews || []).map(r => `
+                <div class="p-3 border rounded-custom text-xs space-y-1">
+                    <div class="flex justify-between font-bold">
+                        <span>Ocena: ${'★'.repeat(r.rating)}</span>
+                        <span class="text-amber-600 uppercase">${r.status === 'pending' ? 'W trakcie zatwierdzania' : 'Zatwierdzona'}</span>
+                    </div>
+                    <p class="text-gray-600">${r.comment}</p>
+                </div>
+            `).join('');
+        }
+
+        async function submitReview(e) {
+            e.preventDefault();
+            const rating = document.getElementById('review-rating').value;
+            const comment = document.getElementById('review-comment').value;
+
+            const { error } = await supabase.from('reviews').insert({
+                user_id: currentUser.id,
+                author_name: document.getElementById('user-name').innerText,
+                rating: parseInt(rating),
+                comment,
+                status: 'pending'
+            });
+
+            if(!error) {
+                showToast('Opinia została przesłana do zatwierdzenia.');
+                loadReviews();
+            }
+        }
+
+        async function logout() {
+            await supabase.auth.signOut();
+            window.location.href = "https://6wdzienniku.vercel.app";
+        }
+
+        document.addEventListener('DOMContentLoaded', initAccount);
+    </script>
+</body>
+</html>
