@@ -27,9 +27,9 @@
         .tab-btn.active svg { stroke: white; }
     </style>
 </head>
-<body class="min-h-screen flex flex-col justify-between">
+<body class="min-h-screen flex flex-col justify-between overflow-x-hidden">
 
-    <div id="toast" class="fixed top-5 right-5 z-50 transform translate-x-full transition-transform duration-300 bg-gray-900 text-white px-5 py-3 rounded-custom shadow-xl border border-purple-500/30 flex items-center gap-3">
+    <div id="toast" class="fixed top-5 right-5 z-50 opacity-0 pointer-events-none transition-opacity duration-300 bg-gray-900 text-white px-5 py-3 rounded-custom shadow-xl border border-purple-500/30 flex items-center gap-3">
         <span id="toast-message" class="text-sm font-medium">Powiadomienie</span>
     </div>
 
@@ -76,7 +76,7 @@
             <section class="md:col-span-9 bg-white p-6 rounded-custom border border-gray-200 shadow-sm">
                 <div id="tab-orders" class="space-y-4">
                     <h2 class="text-xl font-condensed mb-4 border-b pb-2">Moje Zamówienia</h2>
-                    <div id="orders-list" class="space-y-3"><p class="text-xs text-gray-400">Ładowanie...</p></div>
+                    <div id="orders-list" class="space-y-3 max-h-[450px] overflow-y-auto pr-2"><p class="text-xs text-gray-400">Ładowanie...</p></div>
                 </div>
 
                 <div id="tab-accesses" class="space-y-4 hidden">
@@ -124,8 +124,12 @@
             const toast = document.getElementById('toast');
             if (!toast) return;
             document.getElementById('toast-message').innerText = msg;
-            toast.classList.remove('translate-x-full');
-            setTimeout(() => toast.classList.add('translate-x-full'), 4000);
+            toast.classList.remove('opacity-0', 'pointer-events-none');
+            toast.classList.add('opacity-100');
+            setTimeout(() => {
+                toast.classList.remove('opacity-100');
+                toast.classList.add('opacity-0', 'pointer-events-none');
+            }, 4000);
         }
 
         window.switchTab = function(tabName) {
@@ -187,6 +191,12 @@
             }
         }
 
+        function isOrderPaid(status) {
+            if (!status) return false;
+            const s = status.toLowerCase();
+            return s === 'opłacone' || s === 'paid' || s === 'completed' || s === 'zakończone';
+        }
+
         async function loadOrders() {
             const list = document.getElementById('orders-list');
             const select = document.getElementById('review-product-select');
@@ -205,14 +215,20 @@
                     return;
                 }
 
-                const lastOrder = orders[0];
-                let lastItems = [];
-                try {
-                    lastItems = typeof lastOrder.items === 'string' ? JSON.parse(lastOrder.items) : (lastOrder.items || []);
-                } catch(e) { lastItems = []; }
+                const paidOrders = orders.filter(o => isOrderPaid(o.status));
 
-                const extraCount = lastItems.length > 1 ? ` i ${lastItems.length - 1} więcej` : '';
-                document.getElementById('last-order-info').innerText = `Ostatnie zamówienie: #${lastOrder.order_number || lastOrder.id} (${lastItems[0]?.title || 'Produkt'}${extraCount})`;
+                if (paidOrders.length > 0) {
+                    const lastOrder = paidOrders[0];
+                    let lastItems = [];
+                    try {
+                        lastItems = typeof lastOrder.items === 'string' ? JSON.parse(lastOrder.items) : (lastOrder.items || []);
+                    } catch(e) { lastItems = []; }
+
+                    const extraCount = lastItems.length > 1 ? ` i ${lastItems.length - 1} więcej` : '';
+                    document.getElementById('last-order-info').innerText = `Ostatnie zamówienie: #${lastOrder.order_number || lastOrder.id} (${lastItems[0]?.title || 'Produkt'}${extraCount})`;
+                } else {
+                    document.getElementById('last-order-info').innerText = 'Brak opłaconych zamówień';
+                }
 
                 const purchasedProductsMap = new Map();
 
@@ -222,12 +238,16 @@
                         items = typeof o.items === 'string' ? JSON.parse(o.items) : (o.items || []);
                     } catch(e) { items = []; }
 
-                    items.forEach(item => {
-                        const id = item.id || item.product_id;
-                        if (id && !purchasedProductsMap.has(id)) {
-                            purchasedProductsMap.set(id, item.title || 'Produkt');
-                        }
-                    });
+                    const paid = isOrderPaid(o.status);
+
+                    if (paid) {
+                        items.forEach(item => {
+                            const id = item.id || item.product_id;
+                            if (id && !purchasedProductsMap.has(id)) {
+                                purchasedProductsMap.set(id, item.title || 'Produkt');
+                            }
+                        });
+                    }
 
                     const itemsText = items.map(i => `${i.title || 'Produkt'} (x${i.quantity || 1})`).join(', ');
 
@@ -240,7 +260,7 @@
                             </div>
                             <div class="text-right">
                                 <span class="font-bold text-brandViolet">${parseFloat(o.total_amount || 0).toFixed(2)} PLN</span>
-                                <span class="block text-[10px] uppercase font-bold text-green-600">${o.status || 'opłacone'}</span>
+                                <span class="block text-[10px] uppercase font-bold ${paid ? 'text-green-600' : 'text-amber-600'}">${o.status || 'oczekujące'}</span>
                             </div>
                         </div>
                     `;
@@ -262,7 +282,7 @@
             try {
                 const { data: orders } = await supabaseClient
                     .from('orders')
-                    .select('items')
+                    .select('items, status')
                     .eq('user_id', currentUser.id);
 
                 if (!orders || orders.length === 0) {
@@ -272,16 +292,18 @@
 
                 const productIds = new Set();
                 orders.forEach(o => {
-                    let items = [];
-                    try { items = typeof o.items === 'string' ? JSON.parse(o.items) : (o.items || []); } catch(e){}
-                    items.forEach(i => {
-                        const pId = i.id || i.product_id;
-                        if (pId) productIds.add(pId);
-                    });
+                    if (isOrderPaid(o.status)) {
+                        let items = [];
+                        try { items = typeof o.items === 'string' ? JSON.parse(o.items) : (o.items || []); } catch(e){}
+                        items.forEach(i => {
+                            const pId = i.id || i.product_id;
+                            if (pId) productIds.add(pId);
+                        });
+                    }
                 });
 
                 if (productIds.size === 0) {
-                    list.innerHTML = '<p class="text-xs text-gray-500">Brak przypisanych produktów.</p>';
+                    list.innerHTML = '<p class="text-xs text-gray-500">Brak opłaconych produktów z dostępnymi plikami.</p>';
                     return;
                 }
 
@@ -325,7 +347,7 @@
 
                 list.innerHTML = totalFilesCount > 0 ? html : '<p class="text-xs text-gray-500">Zakupione produkty nie posiadają podpiętych plików do pobrania.</p>';
             } catch (err) {
-                console.error("Błąd dostępow:", err);
+                console.error("Błąd dostępu:", err);
                 list.innerHTML = '<p class="text-xs text-red-500">Błąd podczas pobierania plików.</p>';
             }
         }
