@@ -88,8 +88,10 @@
                     <h2 class="text-xl font-condensed mb-4 border-b pb-2">Moje Opinie</h2>
                     <form id="review-form" onsubmit="submitReview(event)" class="bg-gray-50 p-4 rounded-custom space-y-3 mb-6">
                         <h3 class="font-bold text-sm">Wystaw opinię do zamówienia</h3>
-                        <select id="review-product-select" class="w-full text-xs p-2 border rounded-custom" required></select>
-                        <select id="review-rating" class="w-full text-xs p-2 border rounded-custom" required>
+                        <select id="review-product-select" class="w-full text-xs p-2 border rounded-custom bg-white" required>
+                            <option value="" disabled selected>Wybierz zakupiony produkt...</option>
+                        </select>
+                        <select id="review-rating" class="w-full text-xs p-2 border rounded-custom bg-white" required>
                             <option value="5">5 gwiazdek ★★★★★</option>
                             <option value="4">4 gwiazdki ★★★★☆</option>
                             <option value="3">3 gwiazdki ★★★☆☆</option>
@@ -97,7 +99,7 @@
                             <option value="1">1 gwiazdka ★☆☆☆☆</option>
                         </select>
                         <textarea id="review-comment" placeholder="Krótki opis opinii..." class="w-full text-xs p-2 border rounded-custom h-20" required></textarea>
-                        <button type="submit" class="px-4 py-2 bg-brandViolet text-white text-xs font-bold rounded-custom">Dodaj opinię</button>
+                        <button type="submit" id="review-submit-btn" class="px-4 py-2 bg-brandViolet text-white text-xs font-bold rounded-custom hover:bg-purple-800 transition">Dodaj opinię</button>
                     </form>
                     <div id="reviews-list" class="space-y-3"></div>
                 </div>
@@ -113,7 +115,7 @@
     </footer>
 
     <script>
-  const SUPABASE_URL = "https://fxksikgdberwgttvglko.supabase.co";
+        const SUPABASE_URL = "https://fxksikgdberwgttvglko.supabase.co";
         const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ4a3Npa2dkYmVyd2d0dHZnbGtvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA0MzU3NzYsImV4cCI6MjEwNjAxMTc3Nn0.sKf3vvVbaae5-mdg5zwqrgUl6AkXjENanwhDWbH_PXw";
         const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         let currentUser = null;
@@ -145,33 +147,44 @@
             const { data: profile } = await supabase.from('profiles').select('*').eq('id', currentUser.id).single();
             document.getElementById('user-name').innerText = profile?.full_name || currentUser.email;
 
-            loadOrders();
-            loadAccesses();
-            loadReviews();
+            await loadOrders();
+            await loadAccesses();
+            await loadReviews();
         }
 
         async function loadOrders() {
-            const { data: orders } = await supabase.from('orders').select('*').eq('user_id', currentUser.id).order('created_at', { ascending: false });
+            const { data: orders, error } = await supabase.from('orders').select('*').eq('user_id', currentUser.id).order('created_at', { ascending: false });
             const list = document.getElementById('orders-list');
+            const select = document.getElementById('review-product-select');
 
-            if (!orders || orders.length === 0) {
+            if (error || !orders || orders.length === 0) {
                 list.innerHTML = '<p class="text-xs text-gray-500">Brak zamówień.</p>';
+                select.innerHTML = '<option value="" disabled selected>Brak zakupionych produktów do oceny</option>';
                 return;
             }
 
             const lastOrder = orders[0];
             const lastItems = typeof lastOrder.items === 'string' ? JSON.parse(lastOrder.items) : lastOrder.items;
             const extraCount = lastItems.length > 1 ? ` i ${lastItems.length - 1} produktów więcej` : '';
-            document.getElementById('last-order-info').innerText = `Twoje ostatnie zamówienie: #${lastOrder.order_number} (${lastItems[0]?.title}${extraCount})`;
+            document.getElementById('last-order-info').innerText = `Twoje ostatnie zamówienie: #${lastOrder.order_number} (${lastItems[0]?.title || 'Produkt'}${extraCount})`;
+
+            const purchasedProductsMap = new Map();
 
             list.innerHTML = orders.map(o => {
                 const items = typeof o.items === 'string' ? JSON.parse(o.items) : o.items;
+                items.forEach(item => {
+                    const id = item.id || item.product_id || item.title;
+                    if (!purchasedProductsMap.has(id)) {
+                        purchasedProductsMap.set(id, item.title);
+                    }
+                });
+
                 return `
                     <div class="p-4 border rounded-custom flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                         <div>
                             <span class="font-bold text-sm">#${o.order_number}</span>
                             <span class="text-xs text-gray-400 ml-2">${new Date(o.created_at).toLocaleDateString('pl-PL')}</span>
-                            <p class="text-xs text-gray-600 mt-1">${items.map(i => `${i.title} (x${i.quantity})`).join(', ')}</p>
+                            <p class="text-xs text-gray-600 mt-1">${items.map(i => `${i.title} (x${i.quantity || 1})`).join(', ')}</p>
                         </div>
                         <div class="text-right">
                             <span class="font-bold text-brandViolet">${parseFloat(o.total_amount).toFixed(2)} PLN</span>
@@ -180,6 +193,11 @@
                     </div>
                 `;
             }).join('');
+
+            select.innerHTML = '<option value="" disabled selected>Wybierz zakupiony produkt...</option>';
+            purchasedProductsMap.forEach((title, id) => {
+                select.innerHTML += `<option value="${id}">${title}</option>`;
+            });
         }
 
         async function loadAccesses() {
@@ -194,7 +212,7 @@
             list.innerHTML = accesses.map(a => `
                 <div class="p-4 border border-purple-100 bg-purple-50/30 rounded-custom space-y-2">
                     <div class="flex items-center justify-between">
-                        <span class="text-xs uppercase font-bold px-2 py-0.5 bg-purple-200 text-purple-800 rounded">${a.file_type}</span>
+                        <span class="text-xs uppercase font-bold px-2 py-0.5 bg-purple-200 text-purple-800 rounded">${a.file_type || 'PLIK'}</span>
                     </div>
                     <h4 class="font-bold text-sm text-gray-900">${a.title}</h4>
                     <a href="${a.download_url}" target="_blank" download class="inline-flex items-center gap-1.5 text-xs font-bold text-brandViolet hover:underline pt-2">
@@ -206,36 +224,63 @@
         }
 
         async function loadReviews() {
-            const { data: reviews } = await supabase.from('reviews').select('*').eq('user_id', currentUser.id);
+            const { data: reviews } = await supabase.from('reviews').select('*').eq('user_id', currentUser.id).order('created_at', { ascending: false });
             const list = document.getElementById('reviews-list');
 
-            list.innerHTML = (reviews || []).map(r => `
+            if (!reviews || reviews.length === 0) {
+                list.innerHTML = '<p class="text-xs text-gray-500">Brak dodanych opinii.</p>';
+                return;
+            }
+
+            list.innerHTML = reviews.map(r => `
                 <div class="p-3 border rounded-custom text-xs space-y-1">
                     <div class="flex justify-between font-bold">
-                        <span>Ocena: ${'★'.repeat(r.rating)}</span>
+                        <span>${r.product_title ? r.product_title + ' - ' : ''}Ocena: ${'★'.repeat(r.rating)}</span>
                         <span class="text-amber-600 uppercase">${r.status === 'pending' ? 'W trakcie zatwierdzania' : 'Zatwierdzona'}</span>
                     </div>
                     <p class="text-gray-600">${r.comment}</p>
+                    <span class="block text-[10px] text-gray-400">${new Date(r.created_at).toLocaleDateString('pl-PL')}</span>
                 </div>
             `).join('');
         }
 
         async function submitReview(e) {
             e.preventDefault();
+            const submitBtn = document.getElementById('review-submit-btn');
+            const select = document.getElementById('review-product-select');
             const rating = document.getElementById('review-rating').value;
             const comment = document.getElementById('review-comment').value;
 
+            if (!select.value) {
+                showToast('Wybierz produkt z listy!');
+                return;
+            }
+
+            const selectedTitle = select.options[select.selectedIndex].text;
+
+            submitBtn.disabled = true;
+            submitBtn.innerText = 'Wysyłanie...';
+
             const { error } = await supabase.from('reviews').insert({
                 user_id: currentUser.id,
+                product_id: select.value,
+                product_title: selectedTitle,
                 author_name: document.getElementById('user-name').innerText,
                 rating: parseInt(rating),
-                comment,
+                comment: comment,
                 status: 'pending'
             });
 
-            if(!error) {
+            submitBtn.disabled = false;
+            submitBtn.innerText = 'Dodaj opinię';
+
+            if (!error) {
                 showToast('Opinia została przesłana do zatwierdzenia.');
+                document.getElementById('review-comment').value = '';
+                select.selectedIndex = 0;
                 loadReviews();
+            } else {
+                showToast('Błąd podczas dodawania opinii: ' + error.message);
             }
         }
 
