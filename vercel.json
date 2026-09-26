@@ -12,6 +12,10 @@
   ],
   "routes": [
     {
+      "src": "/api/create-payment-intent",
+      "dest": "/api/create-payment-intent.js"
+    },
+    {
       "src": "/api/stripe-webhook",
       "dest": "/api/stripe-webhook.js"
     },
@@ -30,6 +34,13 @@
     {
       "src": "/api-login",
       "dest": "/api-login/index.html"
+    },
+    {
+      "handle": "filesystem"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/404.html"
     }
   ]
 }
