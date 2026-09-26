@@ -145,7 +145,9 @@
     <script>
         const SUPABASE_URL = "https://fxksikgdberwgttvglko.supabase.co";
         const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ4a3Npa2dkYmVyd2d0dHZnbGtvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA0MzU3NzYsImV4cCI6MjEwNjAxMTc3Nn0.sKf3vvVbaae5-mdg5zwqrgUl6AkXjENanwhDWbH_PXw";
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        
+        // Zmiana nazwy zmiennej klienckiej, aby nie kolidowała z window.supabase
+        const dbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         function showToast(m) {
             const t = document.getElementById('toast');
@@ -170,16 +172,16 @@
 
         async function checkAdmin() {
             try {
-                const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+                const { data: { session }, error: sessionError } = await dbClient.auth.getSession();
                 
-                // Jeśli użytkownik jest niezalogowany -> przekierowanie do logowania
+                // Niezalogowany -> Przekierowanie do logowania
                 if (sessionError || !session) { 
                     window.location.href = '/api-login/?login'; 
                     return; 
                 }
 
-                // Weryfikacja roli administratora w tabeli profiles
-                const { data: profile, error: profileError } = await supabase
+                // Weryfikacja roli administratora
+                const { data: profile, error: profileError } = await dbClient
                     .from('profiles')
                     .select('role')
                     .eq('id', session.user.id)
@@ -191,17 +193,16 @@
                     return;
                 }
 
-                // Wyświetlenie sekcji głównej panelu admina
+                // Odblokowanie panelu
                 const mainEl = document.getElementById('admin-main');
                 if (mainEl) mainEl.classList.remove('hidden');
 
-                // Ładowanie zasobów
                 loadAdminProducts();
                 loadAdminCoupons();
                 loadAdminOrders();
                 loadAdminReviews();
             } catch (err) {
-                console.error("Błąd autoryzacji admina:", err);
+                console.error("Błąd autoryzacji:", err);
                 window.location.href = '/api-login/?login';
             }
         }
@@ -218,12 +219,12 @@
 
                 if (progressEl) progressEl.innerText = `Wgrywanie pliku (${i + 1}/${files.length}): ${file.name}...`;
 
-                const { data, error } = await supabase.storage
+                const { data, error } = await dbClient.storage
                     .from('product-files')
                     .upload(filePath, file, { cacheControl: '3600', upsert: true });
 
                 if (!error) {
-                    const { data: publicUrlData } = supabase.storage
+                    const { data: publicUrlData } = dbClient.storage
                         .from('product-files')
                         .getPublicUrl(filePath);
 
@@ -271,7 +272,7 @@
                     download_files: downloadFiles
                 };
 
-                const { error } = await supabase.from('products').insert(productData);
+                const { error } = await dbClient.from('products').insert(productData);
 
                 if (!error) { 
                     showToast('Produkt dodany pomyślnie!'); 
@@ -281,7 +282,7 @@
                     showToast('Błąd dodawania produktu: ' + error.message);
                 }
             } catch (err) {
-                console.error("Błąd zapisu produktu:", err);
+                console.error("Błąd zapisu:", err);
                 showToast('Wystąpił nieoczekiwany błąd.');
             } finally {
                 btn.disabled = false;
@@ -291,7 +292,7 @@
 
         async function loadAdminProducts() {
             try {
-                const { data } = await supabase.from('products').select('*').order('created_at', { ascending: false });
+                const { data } = await dbClient.from('products').select('*').order('created_at', { ascending: false });
                 const listEl = document.getElementById('admin-products-list');
                 if (!listEl) return;
 
@@ -312,7 +313,7 @@
 
         window.deleteProduct = async function(id) {
             if (!confirm('Czy na pewno chcesz usunąć ten produkt?')) return;
-            await supabase.from('products').delete().eq('id', id);
+            await dbClient.from('products').delete().eq('id', id);
             showToast('Produkt usunięty.');
             loadAdminProducts();
         };
@@ -328,7 +329,7 @@
                     valid_until: document.getElementById('c-valid').value || null
                 };
 
-                const { error } = await supabase.from('coupons').insert(couponData);
+                const { error } = await dbClient.from('coupons').insert(couponData);
                 if (!error) {
                     showToast('Kod rabatowy został utworzony!');
                     document.getElementById('coupon-form').reset();
@@ -343,7 +344,7 @@
 
         async function loadAdminCoupons() {
             try {
-                const { data } = await supabase.from('coupons').select('*').order('created_at', { ascending: false });
+                const { data } = await dbClient.from('coupons').select('*').order('created_at', { ascending: false });
                 const listEl = document.getElementById('admin-coupons-list');
                 if (!listEl) return;
 
@@ -362,14 +363,14 @@
         }
 
         window.deleteCoupon = async function(id) {
-            await supabase.from('coupons').delete().eq('id', id);
+            await dbClient.from('coupons').delete().eq('id', id);
             showToast('Kod usunięty.');
             loadAdminCoupons();
         };
 
         async function loadAdminReviews() {
             try {
-                const { data } = await supabase.from('reviews').select('*').order('created_at', { ascending: false });
+                const { data } = await dbClient.from('reviews').select('*').order('created_at', { ascending: false });
                 const pending = (data || []).filter(r => r.status === 'pending').length;
                 
                 const pendingEl = document.getElementById('pending-reviews-count');
@@ -396,20 +397,20 @@
         }
 
         window.approveReview = async function(id) {
-            await supabase.from('reviews').update({ status: 'approved' }).eq('id', id);
+            await dbClient.from('reviews').update({ status: 'approved' }).eq('id', id);
             showToast('Opinia zatwierdzona!');
             loadAdminReviews();
         };
 
         window.deleteReview = async function(id) {
-            await supabase.from('reviews').delete().eq('id', id);
+            await dbClient.from('reviews').delete().eq('id', id);
             showToast('Opinia usunięta.');
             loadAdminReviews();
         };
 
         async function loadAdminOrders() {
             try {
-                const { data } = await supabase.from('orders').select('*').order('created_at', { ascending: false });
+                const { data } = await dbClient.from('orders').select('*').order('created_at', { ascending: false });
                 const listEl = document.getElementById('admin-orders-list');
                 if (!listEl) return;
 
@@ -427,7 +428,6 @@
             }
         }
 
-        // Inicjalizacja sprawdzania uprawnień
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', checkAdmin);
         } else {
