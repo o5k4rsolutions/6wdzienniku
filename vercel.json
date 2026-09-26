@@ -16,9 +16,9 @@
       "dest": "/api/stripe-webhook.js"
     },
     {
-      "src": "/produkty/([^/]+)/([^/]+)",
-      "dest": "/produkty/produkt-template.html"
-    },
+  "src": "/produkty/([^/]+)/([^/]+)",
+  "dest": "/produkty/produkt-template.html"
+},
     {
       "src": "/mojekonto",
       "dest": "/mojekonto/index.html"
@@ -28,8 +28,8 @@
       "dest": "/admin/index.html"
     },
     {
-      "src": "/api-login",
-      "dest": "/api-login/index.html"
-    }
+  "src": "/api-login",
+  "dest": "/api-login/index.html"
+}
   ]
 }
