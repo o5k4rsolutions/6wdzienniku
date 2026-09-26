@@ -20,16 +20,20 @@
         }
     </script>
     <style>
-        body { font-family: 'Open Sans', sans-serif; background-color: #FAFAFC; }
+        body { font-family: 'Open Sans', sans-serif; background-color: #FAFAFC; color: #1F2937; }
         h1, h2, h3, .font-condensed { font-family: 'Open Sans Condensed', sans-serif; font-weight: 700; text-transform: uppercase; }
     </style>
 </head>
-<body class="min-h-screen flex flex-col justify-between">
+<body class="min-h-screen flex flex-col justify-between overflow-x-hidden">
+
+    <div id="toast" class="fixed top-5 right-5 z-50 opacity-0 pointer-events-none transition-opacity duration-300 bg-gray-900 text-white px-5 py-3 rounded-custom shadow-xl border border-purple-500/30 flex items-center gap-3">
+        <span id="toast-message" class="text-sm font-medium">Powiadomienie</span>
+    </div>
 
     <header class="w-full bg-white border-b sticky top-0 z-40 py-3">
         <div class="max-w-7xl mx-auto px-4 flex justify-between items-center">
             <a href="https://6wdzienniku.vercel.app/"><img src="https://6wdzienniku.vercel.app/6-content/logo_6wdzienn_kolor.png" class="h-16" alt="6WDzienniku"></a>
-            <a href="/mojekonto" class="text-xs font-bold text-brandViolet border border-brandViolet px-4 py-2 rounded-custom hover:bg-purple-50">Moje Konto</a>
+            <a href="/mojekonto" class="text-xs font-bold text-brandViolet border border-brandViolet px-4 py-2 rounded-custom hover:bg-purple-50 transition">Moje Konto</a>
         </div>
     </header>
 
@@ -68,16 +72,28 @@
     </footer>
 
     <script>
-          const SUPABASE_URL = "https://fxksikgdberwgttvglko.supabase.co";
+        const SUPABASE_URL = "https://fxksikgdberwgttvglko.supabase.co";
         const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ4a3Npa2dkYmVyd2d0dHZnbGtvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA0MzU3NzYsImV4cCI6MjEwNjAxMTc3Nn0.sKf3vvVbaae5-mdg5zwqrgUl6AkXjENanwhDWbH_PXw";
         const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         let currentProduct = null;
 
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            if (!toast) return;
+            document.getElementById('toast-message').innerText = msg;
+            toast.classList.remove('opacity-0', 'pointer-events-none');
+            toast.classList.add('opacity-100');
+            setTimeout(() => {
+                toast.classList.remove('opacity-100');
+                toast.classList.add('opacity-0', 'pointer-events-none');
+            }, 4000);
+        }
+
         async function loadProduct() {
             const pathParts = window.location.pathname.split('/').filter(Boolean);
-            const productId = pathParts[1]; 
+            const productId = pathParts[pathParts.length - 1]; 
 
-            if(!productId) return;
+            if(!productId || productId === 'produkt') return;
 
             const { data: p } = await supabase.from('products').select('*').eq('id', productId).single();
             if(p) {
@@ -109,7 +125,7 @@
             let cart = JSON.parse(localStorage.getItem('cart') || '[]');
             cart.push({ id: currentProduct.id, title: currentProduct.title, price: currentProduct.is_discounted ? currentProduct.discount_price : currentProduct.price, quantity: 1 });
             localStorage.setItem('cart', JSON.stringify(cart));
-            alert('Dodano produkt do koszyka!');
+            showToast('Dodano produkt do koszyka!');
         }
 
         document.addEventListener('DOMContentLoaded', loadProduct);
