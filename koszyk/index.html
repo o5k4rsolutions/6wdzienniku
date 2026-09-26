@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Koszyk - 6WDzienniku</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://js.stripe.com/v3/"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="icon" type="image/x-icon" href="https://6wdzienniku.vercel.app/6-content/logo_favicon_6.svg">
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans+Condensed:ital,wght@0,300;0,700;1,300&family=Open+Sans:ital,wght@0,300;0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: { brandViolet: '#5B21B6', brandPink: '#EC4899' },
+                    fontFamily: { sans: ['"Open Sans"', 'sans-serif'], condensed: ['"Open Sans Condensed"', 'sans-serif'] },
+                    borderRadius: { 'custom': '10px' }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Open Sans', sans-serif; background-color: #FAFAFC; color: #1F2937; }
+        h1, h2, h3, .font-condensed { font-family: 'Open Sans Condensed', sans-serif; font-weight: 700; text-transform: uppercase; }
+        .text-gradient { background: linear-gradient(135deg, #5B21B6 0%, #EC4899 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between">
+
+    <div id="toast" class="fixed top-5 right-5 z-50 transform translate-x-full transition-transform duration-300 ease-in-out bg-gray-900 text-white px-5 py-3 rounded-custom shadow-xl border border-purple-500/30 flex items-center gap-3">
+        <span id="toast-message" class="text-sm font-medium">Powiadomienie</span>
+    </div>
+
+    <header class="w-full bg-white border-b border-gray-200 sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
+            <a href="https://6wdzienniku.vercel.app/">
+                <img src="https://6wdzienniku.vercel.app/6-content/logo_6wdzienn_kolor.png" alt="6 w dzienniku" class="h-16 sm:h-20 object-contain">
+            </a>
+            <a href="/sklep" class="text-sm font-semibold text-brandViolet hover:underline flex items-center gap-1">
+                ← Powrót do sklepu
+            </a>
+        </div>
+    </header>
+
+    <main class="flex-grow max-w-5xl mx-auto px-4 sm:px-6 py-10 w-full">
+        <h1 class="text-3xl sm:text-4xl font-condensed mb-8">Twój <span class="text-gradient">Koszyk</span></h1>
+
+        <div id="cart-content" class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            <div class="lg:col-span-7 space-y-4" id="cart-items-container">
+                <p class="text-gray-500 font-sans">Twój koszyk jest pusty.</p>
+            </div>
+
+            <div class="lg:col-span-5">
+                <div class="bg-white p-6 rounded-custom border border-gray-200 shadow-sm space-y-6">
+                    <h2 class="text-xl font-condensed border-b border-gray-100 pb-3">Podsumowanie</h2>
+
+                    <div class="flex gap-2">
+                        <input type="text" id="coupon-code" placeholder="Kod rabatowy" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-custom focus:outline-none focus:border-brandViolet">
+                        <button onclick="applyCoupon()" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 text-xs font-semibold rounded-custom transition">Zastosuj</button>
+                    </div>
+
+                    <div class="space-y-2 text-sm border-t border-b border-gray-100 py-4">
+                        <div class="flex justify-between text-gray-600">
+                            <span>Wartość produktów:</span>
+                            <span id="subtotal-val">0.00 PLN</span>
+                        </div>
+                        <div id="discount-row" class="flex justify-between text-pink-600 hidden">
+                            <span>Rabat:</span>
+                            <span id="discount-val">-0.00 PLN</span>
+                        </div>
+                        <div class="flex justify-between font-bold text-base text-gray-900 pt-2">
+                            <span>Razem:</span>
+                            <span id="total-val" class="text-brandViolet">0.00 PLN</span>
+                        </div>
+                    </div>
+
+                    <div id="auth-section">
+                        <div class="bg-purple-50 p-4 rounded-custom border border-purple-100 text-xs text-purple-900 mb-4">
+                            Zaloguj się, aby sfinalizować zamówienie i otrzymać dostęp do materiałów.
+                        </div>
+                        <a href="/api-login/?login" class="block w-full py-3 bg-brandViolet text-white text-center font-bold rounded-custom shadow hover:bg-purple-800 transition">Zaloguj się / Zarejestruj</a>
+                    </div>
+
+                    <div id="checkout-section" class="hidden">
+                        <div id="user-info-box" class="text-xs text-gray-500 mb-4"></div>
+                        <form id="payment-form">
+                            <div id="payment-element" class="mb-4"></div>
+                            <button id="submit-btn" class="w-full py-3.5 bg-gradient-to-r from-brandViolet to-brandPink text-white font-bold rounded-custom shadow-md hover:opacity-95 transition">Zapłać teraz</button>
+                            <div id="payment-message" class="text-xs text-red-500 mt-2 hidden"></div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="bg-white border-t border-gray-200 py-8 text-center text-sm text-gray-500">
+        <div class="max-w-6xl mx-auto px-4 space-y-1">
+            <p>© 2026 <b>6WDzienniku</b>. Wszelkie prawa zastrzeżone.</p>
+        </div>
+    </footer>
+
+    <script>
+     const SUPABASE_URL = "https://fxksikgdberwgttvglko.supabase.co";
+        const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ4a3Npa2dkYmVyd2d0dHZnbGtvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA0MzU3NzYsImV4cCI6MjEwNjAxMTc3Nn0.sKf3vvVbaae5-mdg5zwqrgUl6AkXjENanwhDWbH_PXw";
+        const STRIPE_PK = "pk_live_51U9Lv5Q2ih8UDd9IQJ2lVSHCayHb6qrJUN1y8i3za2f6GZNA0sv4H5tBsFcdbyZAOHL3nvJvQCCA76XYtvBow0kL00yLvmCiTI";
+        
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        const stripe = Stripe(STRIPE_PK);
+
+        let elements;
+        let appliedCouponCode = null;
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toast-message').innerText = msg;
+            toast.classList.remove('translate-x-full');
+            setTimeout(() => toast.classList.add('translate-x-full'), 3000);
+        }
+
+        function renderCart() {
+            const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+            const container = document.getElementById('cart-items-container');
+
+            if (cart.length === 0) {
+                container.innerHTML = '<p class="text-gray-500 font-sans">Twój koszyk jest pusty.</p>';
+                document.getElementById('subtotal-val').innerText = '0.00 PLN';
+                document.getElementById('total-val').innerText = '0.00 PLN';
+                return;
+            }
+
+            let subtotal = 0;
+            container.innerHTML = cart.map((item, index) => {
+                subtotal += item.price * item.quantity;
+                return `
+                    <div class="bg-white p-4 rounded-custom border border-gray-100 shadow-sm flex items-center justify-between gap-4">
+                        <img src="${item.image}" alt="${item.title}" class="w-16 h-16 object-cover rounded-custom">
+                        <div class="flex-grow">
+                            <h3 class="font-bold text-sm text-gray-900">${item.title}</h3>
+                            <p class="text-xs text-brandViolet font-semibold">${parseFloat(item.price).toFixed(2)} PLN</p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs text-gray-500">Ilość: ${item.quantity}</span>
+                            <button onclick="removeItem(${index})" class="p-1 text-gray-400 hover:text-red-500 transition">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            document.getElementById('subtotal-val').innerText = `${subtotal.toFixed(2)} PLN`;
+            document.getElementById('total-val').innerText = `${subtotal.toFixed(2)} PLN`;
+        }
+
+        function removeItem(idx) {
+            let cart = JSON.parse(localStorage.getItem('cart') || '[]');
+            cart.splice(idx, 1);
+            localStorage.setItem('cart', JSON.stringify(cart));
+            renderCart();
+        }
+
+        async function initCheckout() {
+            const { data: { session } } = await supabase.auth.getSession();
+            
+            if (session) {
+                document.getElementById('auth-section').classList.add('hidden');
+                document.getElementById('checkout-section').classList.remove('hidden');
+                document.getElementById('user-info-box').innerText = `Zalogowano jako: ${session.user.email}`;
+
+                const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+                if(cart.length === 0) return;
+
+                const response = await fetch('/api/create-payment-intent', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        items: cart,
+                        userId: session.user.id,
+                        couponCode: appliedCouponCode
+                    })
+                });
+
+                const { clientSecret } = await response.json();
+
+                elements = stripe.elements({ clientSecret });
+                const paymentElement = elements.create('payment');
+                paymentElement.mount('#payment-element');
+            }
+        }
+
+        document.getElementById('payment-form')?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const { error } = await stripe.confirmPayment({
+                elements,
+                confirmParams: {
+                    return_url: window.location.origin + '/mojekonto?payment_success=true',
+                },
+            });
+
+            if (error) {
+                const msg = document.getElementById('payment-message');
+                msg.innerText = error.message;
+                msg.classList.remove('hidden');
+            }
+        });
+
+        document.addEventListener('DOMContentLoaded', () => {
+            renderCart();
+            initCheckout();
+        });
+    </script>
+</body>
+</html>
