@@ -1,0 +1,35 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "api/*.js",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "**/*.html",
+      "use": "@vercel/static"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/stripe-webhook",
+      "dest": "/api/stripe-webhook.js"
+    },
+    {
+      "src": "/produkty/([^/]+)/([^/]+)",
+      "dest": "/produkty/produkt-template.html"
+    },
+    {
+      "src": "/mojekonto",
+      "dest": "/mojekonto/index.html"
+    },
+    {
+      "src": "/admin",
+      "dest": "/admin/index.html"
+    },
+    {
+      "src": "/api-login",
+      "dest": "/api-login/index.html"
+    }
+  ]
+}
