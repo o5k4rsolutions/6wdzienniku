@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Produkt - 6WDzienniku</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="icon" type="image/x-icon" href="https://6wdzienniku.vercel.app/6-content/logo_favicon_6.svg">
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans+Condensed:ital,wght@0,300;0,700;1,300&family=Open+Sans:ital,wght@0,300;0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: { brandViolet: '#5B21B6', brandPink: '#EC4899' },
+                    fontFamily: { sans: ['"Open Sans"', 'sans-serif'], condensed: ['"Open Sans Condensed"', 'sans-serif'] },
+                    borderRadius: { 'custom': '10px' }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Open Sans', sans-serif; background-color: #FAFAFC; }
+        h1, h2, h3, .font-condensed { font-family: 'Open Sans Condensed', sans-serif; font-weight: 700; text-transform: uppercase; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between">
+
+    <header class="w-full bg-white border-b sticky top-0 z-40 py-3">
+        <div class="max-w-7xl mx-auto px-4 flex justify-between items-center">
+            <a href="https://6wdzienniku.vercel.app/"><img src="https://6wdzienniku.vercel.app/6-content/logo_6wdzienn_kolor.png" class="h-16" alt="6WDzienniku"></a>
+            <a href="/mojekonto" class="text-xs font-bold text-brandViolet border border-brandViolet px-4 py-2 rounded-custom hover:bg-purple-50">Moje Konto</a>
+        </div>
+    </header>
+
+    <main class="max-w-6xl mx-auto px-4 py-10 w-full flex-grow">
+        <div id="product-container" class="grid grid-cols-1 md:grid-cols-2 gap-10 bg-white p-8 rounded-custom border border-gray-200 shadow-sm">
+            <div class="space-y-4">
+                <img id="p-img" src="https://via.placeholder.com/500" class="w-full h-80 object-cover rounded-custom border" alt="Produkt">
+            </div>
+            <div class="space-y-6">
+                <span id="p-category" class="text-xs font-bold uppercase text-brandPink">Kategoria</span>
+                <h1 id="p-title" class="text-3xl text-gray-900">Ładowanie produktu...</h1>
+                
+                <div class="space-y-1">
+                    <div class="flex items-baseline gap-3">
+                        <span id="p-price" class="text-3xl font-bold text-brandViolet">0.00 PLN</span>
+                        <span id="p-old-price" class="text-sm text-gray-400 line-through hidden">0.00 PLN</span>
+                    </div>
+                    <div id="p-price-30" class="text-[11px] text-gray-400 hidden">Najniższa cena z ostatnich 30 dni: <span></span> PLN</div>
+                </div>
+
+                <p id="p-desc" class="text-xs text-gray-600 leading-relaxed"></p>
+
+                <button onclick="addToCart()" class="w-full py-4 bg-brandViolet text-white font-bold rounded-custom uppercase text-sm hover:bg-purple-900 transition flex items-center justify-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                    Dodaj do koszyka
+                </button>
+            </div>
+        </div>
+    </main>
+  
+    <footer class="bg-white border-t border-gray-200 py-8 text-center text-sm text-gray-500">
+        <div class="max-w-6xl mx-auto px-4 space-y-1">
+            <p>© 2026 <b>6WDzienniku</b></p>
+            <p>Wszelkie prawa zastrzeżone.</p>
+        </div>
+    </footer>
+
+    <script>
+          const SUPABASE_URL = "https://fxksikgdberwgttvglko.supabase.co";
+        const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ4a3Npa2dkYmVyd2d0dHZnbGtvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA0MzU3NzYsImV4cCI6MjEwNjAxMTc3Nn0.sKf3vvVbaae5-mdg5zwqrgUl6AkXjENanwhDWbH_PXw";
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        let currentProduct = null;
+
+        async function loadProduct() {
+            const pathParts = window.location.pathname.split('/').filter(Boolean);
+            const productId = pathParts[1]; 
+
+            if(!productId) return;
+
+            const { data: p } = await supabase.from('products').select('*').eq('id', productId).single();
+            if(p) {
+                currentProduct = p;
+                document.title = `${p.title} - 6WDzienniku`;
+                document.getElementById('p-title').innerText = p.title;
+                document.getElementById('p-category').innerText = p.category || 'Produkt cyfrowy';
+                document.getElementById('p-desc').innerText = p.description;
+                document.getElementById('p-img').src = p.images?.[0] || 'https://via.placeholder.com/500';
+
+                if(p.is_discounted) {
+                    document.getElementById('p-price').innerText = `${parseFloat(p.discount_price).toFixed(2)} PLN`;
+                    document.getElementById('p-old-price').innerText = `${parseFloat(p.price).toFixed(2)} PLN`;
+                    document.getElementById('p-old-price').classList.remove('hidden');
+                } else {
+                    document.getElementById('p-price').innerText = `${parseFloat(p.price).toFixed(2)} PLN`;
+                }
+
+                if(p.price_before_30_days) {
+                    const el = document.getElementById('p-price-30');
+                    el.querySelector('span').innerText = parseFloat(p.price_before_30_days).toFixed(2);
+                    el.classList.remove('hidden');
+                }
+            }
+        }
+
+        function addToCart() {
+            if(!currentProduct) return;
+            let cart = JSON.parse(localStorage.getItem('cart') || '[]');
+            cart.push({ id: currentProduct.id, title: currentProduct.title, price: currentProduct.is_discounted ? currentProduct.discount_price : currentProduct.price, quantity: 1 });
+            localStorage.setItem('cart', JSON.stringify(cart));
+            alert('Dodano produkt do koszyka!');
+        }
+
+        document.addEventListener('DOMContentLoaded', loadProduct);
+    </script>
+</body>
+</html>
