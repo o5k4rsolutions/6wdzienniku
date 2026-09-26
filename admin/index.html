@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Dodaj Produkt</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>body { font-family: 'Poppins', sans-serif; }</style>
+</head>
+<body class="bg-slate-50 text-slate-800 p-10">
+
+    <div class="max-w-2xl mx-auto bg-white p-8 rounded-2xl shadow-md">
+        <h1 class="text-2xl font-bold mb-6 text-[#5B21B6]">Dodaj nowy produkt</h1>
+        
+        <form id="add-product-form" class="space-y-4">
+            <div>
+                <label class="block text-sm font-semibold mb-1">Nazwa produktu</label>
+                <input type="text" id="title" required class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:border-[#5B21B6]">
+            </div>
+            
+            <div>
+                <label class="block text-sm font-semibold mb-1">Slug (przyjazny link, np. pakiet-matematyka)</label>
+                <input type="text" id="slug" required class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:border-[#5B21B6]">
+            </div>
+
+            <div>
+                <label class="block text-sm font-semibold mb-1">Opis</label>
+                <textarea id="description" rows="3" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:border-[#5B21B6]"></textarea>
+            </div>
+
+            <div class="grid grid-cols-3 gap-4">
+                <div>
+                    <label class="block text-sm font-semibold mb-1">Cena regularna</label>
+                    <input type="number" step="0.01" id="price" required class="w-full px-4 py-2 border rounded-lg">
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold mb-1">Cena promocyjna</label>
+                    <input type="number" step="0.01" id="discount_price" class="w-full px-4 py-2 border rounded-lg">
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold mb-1">Najniższa z 30 dni</label>
+                    <input type="number" step="0.01" id="old_price" class="w-full px-4 py-2 border rounded-lg">
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-sm font-semibold mb-1">Link do pobrania pliku po zakupie</label>
+                <input type="url" id="download_url" required class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:border-[#5B21B6]">
+            </div>
+
+            <button type="submit" class="w-full bg-[#5B21B6] text-white font-bold py-3 rounded-lg hover:bg-purple-800 transition">
+                Zapisz do bazy
+            </button>
+            <p id="status-msg" class="text-center font-semibold mt-4 hidden"></p>
+        </form>
+    </div>
+
+    <script>
+       const SUPABASE_URL = 'https://kzdovdyzqvbuiqnorati.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt6ZG92ZHl6cXZidWlxbm9yYXRpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA0MDQwMjYsImV4cCI6MjEwNTk4MDAyNn0.4gbSDcQhl8KsJmPmuyjtaf2vg8RLsxWyOO7IzjkzzW8';
+        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        document.getElementById('add-product-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const msg = document.getElementById('status-msg');
+            msg.classList.remove('hidden', 'text-red-500', 'text-green-500');
+            msg.innerText = 'Zapisywanie...';
+
+            const product = {
+                title: document.getElementById('title').value,
+                slug: document.getElementById('slug').value,
+                description: document.getElementById('description').value,
+                price: parseFloat(document.getElementById('price').value),
+                discount_price: document.getElementById('discount_price').value ? parseFloat(document.getElementById('discount_price').value) : null,
+                old_price_30_days: document.getElementById('old_price').value ? parseFloat(document.getElementById('old_price').value) : null,
+                download_url: document.getElementById('download_url').value,
+                images: ["https://via.placeholder.com/400x300"] 
+            };
+
+            const { data, error } = await supabase.from('products').insert([product]);
+
+            if (error) {
+                msg.classList.add('text-red-500');
+                msg.innerText = `Błąd: ${error.message}`;
+            } else {
+                msg.classList.add('text-green-500');
+                msg.innerText = 'Produkt dodany pomyślnie!';
+                document.getElementById('add-product-form').reset();
+            }
+        });
+    </script>
+</body>
+</html>
