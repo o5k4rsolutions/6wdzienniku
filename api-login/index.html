@@ -207,7 +207,7 @@
 
             const email = document.getElementById('f-email').value;
             const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
-                redirectTo: 'https://6wdzienniku.vercel.app/mojekonto'
+                redirectTo: 'https://6wdzienniku.vercel.app/reset-password.html'
             });
 
             setLoading('btn-forgot', false);
@@ -215,7 +215,7 @@
             if (error) { 
                 showToast(error.message); 
             } else { 
-                showToast('Instrukcje wysłano na e-mail.'); 
+                showToast('Link do zmiany hasła wysłano na e-mail.'); 
                 window.toggleForm('login'); 
             }
         }
