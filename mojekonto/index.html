@@ -117,8 +117,7 @@
     <script>
         const SUPABASE_URL = "https://fxksikgdberwgttvglko.supabase.co";
         const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ4a3Npa2dkYmVyd2d0dHZnbGtvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA0MzU3NzYsImV4cCI6MjEwNjAxMTc3Nn0.sKf3vvVbaae5-mdg5zwqrgUl6AkXjENanwhDWbH_PXw";
-        
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         let currentUser = null;
 
         function showToast(msg) {
@@ -146,7 +145,7 @@
 
         window.logout = async function() {
             try {
-                await supabase.auth.signOut();
+                await supabaseClient.auth.signOut();
             } catch (err) {
                 console.error("Błąd wylogowania:", err);
             } finally {
@@ -163,7 +162,7 @@
                     window.history.replaceState({}, document.title, window.location.pathname);
                 }
 
-                const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+                const { data: { session }, error: sessionError } = await supabaseClient.auth.getSession();
                 
                 if (sessionError || !session) {
                     window.location.href = '/api-login/';
@@ -173,7 +172,7 @@
                 currentUser = session.user;
 
                 try {
-                    const { data: profile } = await supabase.from('profiles').select('full_name').eq('id', currentUser.id).maybeSingle();
+                    const { data: profile } = await supabaseClient.from('profiles').select('full_name').eq('id', currentUser.id).maybeSingle();
                     document.getElementById('user-name').innerText = profile?.full_name || currentUser.email || 'Użytkowniku';
                 } catch (e) {
                     document.getElementById('user-name').innerText = currentUser.email || 'Użytkowniku';
@@ -193,7 +192,7 @@
             const select = document.getElementById('review-product-select');
 
             try {
-                const { data: orders, error } = await supabase
+                const { data: orders, error } = await supabaseClient
                     .from('orders')
                     .select('*')
                     .eq('user_id', currentUser.id)
@@ -261,7 +260,7 @@
         async function loadAccesses() {
             const list = document.getElementById('accesses-list');
             try {
-                const { data: orders } = await supabase
+                const { data: orders } = await supabaseClient
                     .from('orders')
                     .select('items')
                     .eq('user_id', currentUser.id);
@@ -286,7 +285,7 @@
                     return;
                 }
 
-                const { data: products } = await supabase
+                const { data: products } = await supabaseClient
                     .from('products')
                     .select('id, title, download_files')
                     .in('id', Array.from(productIds));
@@ -334,7 +333,7 @@
         async function loadReviews() {
             const list = document.getElementById('reviews-list');
             try {
-                const { data: reviews } = await supabase.from('reviews').select('*').eq('user_id', currentUser.id).order('created_at', { ascending: false });
+                const { data: reviews } = await supabaseClient.from('reviews').select('*').eq('user_id', currentUser.id).order('created_at', { ascending: false });
 
                 if (!reviews || reviews.length === 0) {
                     list.innerHTML = '<p class="text-xs text-gray-500">Brak dodanych opinii.</p>';
@@ -373,7 +372,7 @@
             submitBtn.disabled = true;
             submitBtn.innerText = 'Wysyłanie...';
 
-            const { error } = await supabase.from('reviews').insert({
+            const { error } = await supabaseClient.from('reviews').insert({
                 user_id: currentUser.id,
                 product_id: select.value,
                 product_title: selectedTitle,
