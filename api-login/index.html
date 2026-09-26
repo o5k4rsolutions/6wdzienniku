@@ -47,13 +47,13 @@
                     <button type="submit" class="w-full py-3 bg-brandViolet text-white font-bold rounded-custom text-xs uppercase">Zaloguj się</button>
                     
                     <div class="flex justify-between text-xs text-gray-500 pt-2">
-                        <button type="button" onclick="toggleForm('register')" class="hover:underline">Brak konta? Zarejestruj się</button>
-                        <button type="button" onclick="toggleForm('forgot')" class="hover:underline">Zapomniałeś hasła?</button>
+                        <button type="button" onclick="window.toggleForm('rejestracja')" class="hover:underline">Brak konta? Zarejestruj się</button>
+                        <button type="button" onclick="window.toggleForm('reset')" class="hover:underline">Zapomniałeś hasła?</button>
                     </div>
                 </form>
             </div>
 
-            <div id="form-register" class="space-y-4 hidden">
+            <div id="form-rejestracja" class="space-y-4 hidden">
                 <h1 class="text-2xl text-center text-gray-900">Załóż konto</h1>
                 <form onsubmit="handleRegister(event)" class="space-y-3">
                     <input type="text" id="r-name" placeholder="Imię i nazwisko" class="w-full p-3 border rounded-custom text-xs" required>
@@ -62,19 +62,19 @@
                     <button type="submit" class="w-full py-3 bg-brandPink text-white font-bold rounded-custom text-xs uppercase">Zarejestruj się</button>
                     
                     <div class="text-center text-xs text-gray-500 pt-2">
-                        <button type="button" onclick="toggleForm('login')" class="hover:underline">Masz już konto? Zaloguj się</button>
+                        <button type="button" onclick="window.toggleForm('login')" class="hover:underline">Masz już konto? Zaloguj się</button>
                     </div>
                 </form>
             </div>
 
-            <div id="form-forgot" class="space-y-4 hidden">
+            <div id="form-reset" class="space-y-4 hidden">
                 <h1 class="text-2xl text-center text-gray-900">Odzyskaj hasło</h1>
                 <form onsubmit="handleForgot(event)" class="space-y-3">
                     <input type="email" id="f-email" placeholder="Wprowadź swój e-mail" class="w-full p-3 border rounded-custom text-xs" required>
                     <button type="submit" class="w-full py-3 bg-gray-800 text-white font-bold rounded-custom text-xs uppercase">Wyślij link resetujący</button>
                     
                     <div class="text-center text-xs text-gray-500 pt-2">
-                        <button type="button" onclick="toggleForm('login')" class="hover:underline">Wróć do logowania</button>
+                        <button type="button" onclick="window.toggleForm('login')" class="hover:underline">Wróć do logowania</button>
                     </div>
                 </form>
             </div>
@@ -82,8 +82,11 @@
         </div>
     </main>
 
-    <footer class="bg-white border-t py-6 text-center text-xs text-gray-500">
-        © 2026 <b>6WDzienniku</b>
+    <footer class="bg-white border-t border-gray-200 py-8 text-center text-sm text-gray-500">
+        <div class="max-w-6xl mx-auto px-4 space-y-1">
+            <p>© 2026 <b>6WDzienniku</b></p>
+            <p>Wszelkie prawa zastrzeżone.</p>
+        </div>
     </footer>
 
     <script>
@@ -98,9 +101,29 @@
             setTimeout(() => t.classList.add('translate-x-full'), 3000);
         }
 
-        function toggleForm(f) {
-            ['login', 'register', 'forgot'].forEach(s => document.getElementById(`form-${s}`).classList.add('hidden'));
-            document.getElementById(`form-${f}`).classList.remove('hidden');
+        window.toggleForm = function(formName) {
+            const availableForms = ['login', 'rejestracja', 'reset'];
+            if (!availableForms.includes(formName)) formName = 'login';
+
+            availableForms.forEach(s => {
+                const el = document.getElementById(`form-${s}`);
+                if (el) el.classList.add('hidden');
+            });
+
+            const target = document.getElementById(`form-${formName}`);
+            if (target) target.classList.remove('hidden');
+
+            const newUrl = `${window.location.pathname}?${formName}`;
+            window.history.pushState({ path: newUrl }, '', newUrl);
+        };
+
+        function initFormFromUrl() {
+            const search = window.location.search.replace('?', '');
+            if (['rejestracja', 'reset', 'login'].includes(search)) {
+                window.toggleForm(search);
+            } else {
+                window.toggleForm('login');
+            }
         }
 
         async function handleLogin(e) {
@@ -129,7 +152,7 @@
                 showToast(error.message); 
             } else { 
                 showToast('Konto zostało utworzone! Zaloguj się.'); 
-                toggleForm('login'); 
+                window.toggleForm('login'); 
             }
         }
 
@@ -143,9 +166,15 @@
                 showToast(error.message); 
             } else { 
                 showToast('Instrukcje wysłano na e-mail.'); 
-                toggleForm('login'); 
+                window.toggleForm('login'); 
             }
         }
+
+        window.onpopstate = function() {
+            initFormFromUrl();
+        };
+        
+        document.addEventListener('DOMContentLoaded', initFormFromUrl);
     </script>
 </body>
 </html>
