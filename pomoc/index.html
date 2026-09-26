@@ -78,10 +78,27 @@
             left: 0;
         }
 
+        .btn-sweep:hover svg {
+            stroke: #ffffff !important;
+            fill: #ffffff !important;
+            transition: all 0.3s ease;
+        }
+
         .text-gradient {
             background: linear-gradient(135deg, #5B21B6 0%, #EC4899 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
+        }
+
+        .reveal {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: all 0.8s cubic-bezier(0.5, 0, 0, 1);
+        }
+
+        .reveal.active {
+            opacity: 1;
+            transform: translateY(0);
         }
     </style>
 </head>
@@ -89,67 +106,105 @@
 
     <header class="w-full bg-white border-b border-gray-200 sticky top-0 z-40">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex flex-col md:flex-row items-center justify-between gap-4">
+            
             <div class="flex items-center justify-center md:justify-start w-full md:w-auto">
-                <a href="https://6wdzienniku.vercel.app/" class="inline-block transition-transform duration-300 hover:scale-105">
-                    <img src="https://6wdzienniku.vercel.app/6-content/logo_6wdzienn_kolor.png" alt="6 w dzienniku Logo" class="h-16 sm:h-20 object-contain mx-auto">
+                <a href="https://6wdzienniku.vercel.app" class="inline-block transition-transform duration-300 hover:scale-105">
+                    <img src="https://6wdzienniku.vercel.app/6-content/logo_6wdzienn_kolor.png" 
+                         alt="6 w dzienniku Logo" 
+                         class="h-16 sm:h-20 object-contain mx-auto">
                 </a>
             </div>
+
             <div class="flex flex-wrap items-center justify-center md:justify-end gap-3 sm:gap-6 w-full md:w-auto text-xs sm:text-sm">
                 <div class="flex items-center space-x-2">
-                    <a href="https://6wdzienniku.vercel.app/" class="btn-sweep px-3 sm:px-4 py-2 border border-brandViolet text-brandViolet font-semibold rounded-custom text-xs sm:text-sm bg-white shadow-sm">
+                    <a href="https://6wdzienniku.vercel.app" class="btn-sweep px-3 sm:px-4 py-2 border border-brandViolet text-brandViolet font-semibold rounded-custom text-xs sm:text-sm flex items-center space-x-1.5 bg-white shadow-sm">
+                        <svg class="w-4 h-4 stroke-brandViolet transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
+                        </svg>
                         <span>Strona główna</span>
                     </a>
-                    <a href="https://6wdzienniku.vercel.app/sklep" class="btn-sweep px-3 sm:px-4 py-2 border border-brandPink text-brandPink font-semibold rounded-custom text-xs sm:text-sm bg-white shadow-sm">
+
+                    <a href="https://6wdzienniku.vercel.app/sklep" class="btn-sweep px-3 sm:px-4 py-2 border border-brandPink text-brandPink font-semibold rounded-custom text-xs sm:text-sm flex items-center space-x-1.5 bg-white shadow-sm">
+                        <svg class="w-4 h-4 stroke-brandPink transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path>
+                        </svg>
                         <span>Sklep</span>
                     </a>
                 </div>
             </div>
+
         </div>
     </header>
 
-    <main class="flex-grow py-12 px-4 sm:px-6">
-        <div class="max-w-4xl mx-auto text-center space-y-6">
-            
-            <div class="bg-white p-8 rounded-2xl shadow-sm border border-gray-200 space-y-4">
-                <h1 class="text-3xl sm:text-4xl font-condensed text-gray-900">Potrzebujesz pomocy? <span class="text-gradient">Jesteśmy tutaj!</span></h1>
-                <p class="text-gray-600 text-base sm:text-lg max-w-2xl mx-auto font-sans leading-relaxed">
-                    Masz pytania dotyczące materiałów edukacyjnych lub potrzebujesz zgłosić sprawę do naszego Biura Obsługi Klienta? Skorzystaj z naszego inteligentnego bota pomocy, który odpowie na Twoje pytania lub przekaże zgłoszenie bezpośrednio do nas.
+    <main class="flex-grow">
+        <section class="bg-gradient-to-r from-gray-100 via-gray-50 to-purple-50 py-12 md:py-16 border-b border-gray-200 relative overflow-hidden reveal">
+            <div class="max-w-4xl mx-auto px-4 text-center space-y-4">
+                <h1 class="text-4xl sm:text-5xl text-gray-950 tracking-tight leading-none font-condensed">
+                    Centrum <span class="text-gradient">Pomocy</span>
+                </h1>
+                <p class="text-gray-600 text-base sm:text-lg max-w-xl mx-auto font-sans">
+                    Potrzebujesz wsparcia lub masz pytania dotyczące zamówienia? Skontaktuj się z naszym Biurem Obsługi Klienta.
                 </p>
-                <div class="pt-2">
-                    <button onclick="openChatInterface()" class="btn-sweep px-8 py-4 bg-white border-2 border-brandViolet text-brandViolet font-bold rounded-custom text-base shadow-md">
-                        <span>Otwórz Czat</span>
-                    </button>
-                </div>
             </div>
+        </section>
 
-            <div id="chat-container" class="hidden bg-white rounded-2xl shadow-xl border border-gray-200 flex flex-col h-[600px] overflow-hidden text-left transition-all duration-300">
-                <div class="bg-gradient-to-r from-brandViolet to-brandPink text-white p-4 sm:px-6 flex items-center justify-between">
-                    <div class="flex items-center space-x-3">
-                        <span class="font-condensed font-bold tracking-wider text-lg">Asystent Pomocy 6WDzienniku</span>
+        <section class="max-w-4xl mx-auto px-4 py-12 reveal">
+            <div class="bg-white p-8 sm:p-10 rounded-custom shadow-xl border border-gray-100 space-y-8">
+                
+                <div class="text-center pb-6 border-b border-gray-100">
+                    <h2 class="text-2xl sm:text-3xl font-condensed text-gray-900 mb-2">BOK 6WDzienniku</h2>
+                    <p class="text-gray-600 text-sm sm:text-base font-sans">Napisz do nas bezpośrednio na adres e-mail:</p>
+                    <div class="mt-4 inline-block bg-purple-50 border border-purple-100 px-6 py-3 rounded-custom">
+                        <a href="mailto:kontakt.6wdzienniku@outlook.com" class="text-brandViolet font-bold text-lg sm:text-xl hover:underline">
+                            kontakt.6wdzienniku@outlook.com
+                        </a>
                     </div>
-                    <button onclick="closeChatInterface()" class="text-white hover:text-gray-200 text-2xl font-bold">&times;</button>
                 </div>
 
-                <div id="chat-messages" class="flex-1 p-4 sm:p-6 overflow-y-auto space-y-4 bg-gray-50 text-sm font-sans">
-                    <div class="flex items-start">
-                        <div class="bg-purple-100 text-brandViolet p-3.5 rounded-custom max-w-[85%] sm:max-w-[75%] leading-relaxed shadow-sm">
-                            Cześć! W czym mogę Ci dzisiaj pomóc?
+                <div class="bg-amber-50/60 border border-amber-200 rounded-custom p-4 sm:p-5 flex items-start space-x-3">
+                    <svg class="w-6 h-6 text-amber-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    <p class="text-sm text-amber-900 font-sans leading-relaxed">
+                        <b>Wskazówka:</b> Prosimy o krótki opis w tytule sprawy, aby szybciej rozpatrzeć zgłoszenia.
+                    </p>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
+                    <div class="bg-gray-50 p-6 rounded-custom border border-gray-200 flex flex-col justify-between">
+                        <div>
+                            <div class="flex items-center space-x-2 text-brandViolet mb-3">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                                <h3 class="text-lg font-condensed tracking-wide">Godziny pracy</h3>
+                            </div>
+                            <p class="text-sm text-gray-700 font-sans space-y-1">
+                                Pracujemy od poniedziałku do piątku od <b>12:00 do 20:00</b> oraz w soboty od <b>13:00 do 17:00</b>.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="bg-gray-50 p-6 rounded-custom border border-gray-200 flex flex-col justify-between">
+                        <div>
+                            <div class="flex items-center space-x-2 text-brandPink mb-3">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                                </svg>
+                                <h3 class="text-lg font-condensed tracking-wide">Czas odpowiedzi</h3>
+                            </div>
+                            <p class="text-sm text-gray-700 font-sans">
+                                Na zgłoszenia odpowiadamy w przeciągu <b>24 godzin roboczych</b>.
+                            </p>
                         </div>
                     </div>
                 </div>
 
-                <div class="p-4 sm:p-5 bg-white border-t border-gray-200 flex items-center gap-3">
-                    <input type="text" id="chat-input" placeholder="Wpisz swoją wiadomość..." class="flex-1 px-4 py-3 border border-gray-300 rounded-custom text-sm focus:outline-none focus:border-brandViolet shadow-sm" onkeydown="if(event.key === 'Enter') sendChatMessage()">
-                    <button onclick="sendChatMessage()" class="btn-sweep px-6 py-3 bg-white border-2 border-brandViolet text-brandViolet font-bold rounded-custom text-sm shadow-md">
-                        <span>Wyślij</span>
-                    </button>
-                </div>
             </div>
-
-        </div>
+        </section>
     </main>
 
- <footer class="bg-white border-t border-gray-200 py-8 text-center text-sm text-gray-500">
+    <footer class="bg-white border-t border-gray-200 py-8 text-center text-sm text-gray-500">
         <div class="max-w-6xl mx-auto px-4 space-y-1">
             <p>© 2026 <b>6WDzienniku</b></p>
             <p>Wszelkie prawa zastrzeżone.</p>
@@ -157,41 +212,21 @@
     </footer>
 
     <script>
-        function openChatInterface() {
-            const chatContainer = document.getElementById('chat-container');
-            chatContainer.classList.remove('hidden');
-            chatContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-        }
+        function revealOnScroll() {
+            const reveals = document.querySelectorAll('.reveal');
+            for (let i = 0; i < reveals.length; i++) {
+                const windowHeight = window.innerHeight;
+                const elementTop = reveals[i].getBoundingClientRect().top;
+                const elementVisible = 80;
 
-        function closeChatInterface() {
-            const chatContainer = document.getElementById('chat-container');
-            chatContainer.classList.add('hidden');
-        }
-
-        async function sendChatMessage() {
-            const input = document.getElementById('chat-input');
-            const messagesContainer = document.getElementById('chat-messages');
-            const text = input.value.trim();
-            if(!text) return;
-
-            messagesContainer.innerHTML += `<div class="flex justify-end"><div class="bg-brandViolet text-white p-3.5 rounded-custom max-w-[85%] sm:max-w-[75%] leading-relaxed shadow-sm">${text}</div></div>`;
-            input.value = '';
-            messagesContainer.scrollTop = messagesContainer.scrollHeight;
-
-            try {
-                const response = await fetch('/api/chat', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ message: text })
-                });
-                const data = await response.json();
-
-                messagesContainer.innerHTML += `<div class="flex items-start"><div class="bg-purple-50 text-gray-900 border border-purple-100 p-3.5 rounded-custom max-w-[85%] sm:max-w-[75%] leading-relaxed shadow-sm">${data.reply}</div></div>`;
-                messagesContainer.scrollTop = messagesContainer.scrollHeight;
-            } catch (err) {
-                messagesContainer.innerHTML += `<div class="flex items-start"><div class="bg-red-50 text-red-700 p-3.5 rounded-custom max-w-[85%] sm:max-w-[75%] leading-relaxed shadow-sm">Wystąpił błąd połączenia z serwerem. Spróbuj ponownie później.</div></div>`;
+                if (elementTop < windowHeight - elementVisible) {
+                    reveals[i].classList.add('active');
+                }
             }
         }
+
+        window.addEventListener('scroll', revealOnScroll);
+        revealOnScroll();
     </script>
 </body>
 </html>
