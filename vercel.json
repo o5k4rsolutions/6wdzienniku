@@ -12,13 +12,17 @@
   ],
   "routes": [
     {
+      "src": "/6-content/(.*)",
+      "dest": "/6-content/$1"
+    },
+    {
       "src": "/api/stripe-webhook",
       "dest": "/api/stripe-webhook.js"
     },
     {
-  "src": "/produkty/([^/]+)/([^/]+)",
-  "dest": "/produkty/produkt-template.html"
-},
+      "src": "/produkty/([^/]+)/([^/]+)",
+      "dest": "/produkty/produkt-template.html"
+    },
     {
       "src": "/mojekonto",
       "dest": "/mojekonto/index.html"
@@ -28,8 +32,16 @@
       "dest": "/admin/index.html"
     },
     {
-  "src": "/api-login",
-  "dest": "/api-login/index.html"
-}
+      "src": "/api-login",
+      "dest": "/api-login/index.html"
+    },
+    {
+      "handle": "filesystem"
+    },
+    {
+      "src": "/(.*)",
+      "status": 404,
+      "dest": "/404.html"
+    }
   ]
 }
