@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel Admina - 6WDzienniku</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="icon" type="image/x-icon" href="https://6wdzienniku.vercel.app/6-content/logo_favicon_6.svg">
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans+Condensed:ital,wght@0,300;0,700;1,300&family=Open+Sans:ital,wght@0,300;0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: { brandViolet: '#5B21B6', brandPink: '#EC4899' },
+                    fontFamily: { sans: ['"Open Sans"', 'sans-serif'], condensed: ['"Open Sans Condensed"', 'sans-serif'] },
+                    borderRadius: { 'custom': '10px' }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Open Sans', sans-serif; background-color: #FAFAFC; color: #1F2937; }
+        h1, h2, h3, .font-condensed { font-family: 'Open Sans Condensed', sans-serif; font-weight: 700; text-transform: uppercase; }
+        .tab-admin.active { background-color: #5B21B6; color: white; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between">
+
+    <div id="toast" class="fixed top-5 right-5 z-50 transform translate-x-full transition-transform duration-300 bg-gray-900 text-white px-5 py-3 rounded-custom shadow-xl border border-purple-500/30 text-sm">
+        <span id="toast-message">Powiadomienie</span>
+    </div>
+
+    <!-- Header -->
+    <header class="w-full bg-white border-b border-gray-200 sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
+            <a href="https://6wdzienniku.vercel.app/">
+                <img src="https://6wdzienniku.vercel.app/6-content/logo_6wdzienn_kolor.png" alt="6 w dzienniku" class="h-16 object-contain">
+            </a>
+            <span class="text-xs bg-red-100 text-red-700 font-bold px-3 py-1 rounded-full uppercase">Panel Administratora</span>
+        </div>
+    </header>
+
+    <main class="flex-grow max-w-7xl mx-auto px-4 sm:px-6 py-8 w-full">
+        <!-- Statystyki / Baner -->
+        <div class="bg-purple-900 text-white p-6 rounded-custom shadow-md mb-8 flex flex-col sm:flex-row justify-between items-center gap-4">
+            <div>
+                <h1 class="text-2xl font-condensed">Panel Zarządzania</h1>
+                <p class="text-xs text-purple-200 mt-1">Masz <span id="pending-reviews-count" class="font-bold text-amber-300">0</span> opinii do zatwierdzenia.</p>
+            </div>
+        </div>
+
+        <!-- Taby -->
+        <div class="flex flex-wrap gap-2 mb-6 border-b pb-3">
+            <button onclick="switchAdminTab('products')" id="admin-tab-products" class="tab-admin active px-4 py-2 rounded-custom border text-xs font-bold">Produkty</button>
+            <button onclick="switchAdminTab('coupons')" id="admin-tab-coupons" class="tab-admin px-4 py-2 rounded-custom border text-xs font-bold">Kody Zniżkowe</button>
+            <button onclick="switchAdminTab('orders')" id="admin-tab-orders" class="tab-admin px-4 py-2 rounded-custom border text-xs font-bold">Zamówienia</button>
+            <button onclick="switchAdminTab('reviews')" id="admin-tab-reviews" class="tab-admin px-4 py-2 rounded-custom border text-xs font-bold">Opinie</button>
+        </div>
+
+        <!-- 1. Produkty -->
+        <section id="sec-products" class="space-y-6">
+            <div class="bg-white p-6 rounded-custom border shadow-sm">
+                <h2 class="text-lg font-condensed mb-4">Dodaj / Edytuj Produkt</h2>
+                <form id="product-form" onsubmit="saveProduct(event)" class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                    <input type="text" id="p-title" placeholder="Tytuł produktu" class="p-2.5 border rounded-custom" required>
+                    <input type="text" id="p-slug" placeholder="Slug (np. testy-matematyka-klasa-4)" class="p-2.5 border rounded-custom" required>
+                    <textarea id="p-desc" placeholder="Opis produktu" class="p-2.5 border rounded-custom sm:col-span-2"></textarea>
+                    
+                    <input type="number" step="0.01" id="p-price" placeholder="Cena podstawowa (PLN)" class="p-2.5 border rounded-custom" required>
+                    <input type="number" step="0.01" id="p-price-30" placeholder="Cena 30 dni przed obniżką" class="p-2.5 border rounded-custom">
+                    
+                    <div class="flex items-center gap-2">
+                        <input type="checkbox" id="p-is-discount">
+                        <label for="p-is-discount">Promocja włączona</label>
+                    </div>
+                    <input type="number" step="0.01" id="p-discount-price" placeholder="Cena promocyjna (PLN)" class="p-2.5 border rounded-custom">
+
+                    <select id="p-type" class="p-2.5 border rounded-custom">
+                        <option value="eproduct">Cyfrowy (e-produkt / ZIP / Plik)</option>
+                        <option value="physical">Fizyczny</option>
+                    </select>
+                    <input type="text" id="p-category" placeholder="Kategoria" class="p-2.5 border rounded-custom">
+
+                    <input type="text" id="p-images" placeholder="URL Zdjęć (rozdzielone przecinkami)" class="p-2.5 border rounded-custom sm:col-span-2">
+                    
+                    <div class="sm:col-span-2 border-t pt-3 space-y-2">
+                        <label class="font-bold">Pliki / Foldery do pobrania (JSON format: [{"name":"Test.pdf","url":"https://...","type":"pdf"}])</label>
+                        <textarea id="p-files" placeholder='[{"name":"Paczka materiałów","url":"https://.../paczka.zip","type":"zip"}]' class="w-full p-2.5 border rounded-custom h-16"></textarea>
+                        <p class="text-[10px] text-gray-400">Po zapisie produkt otrzyma adres `/produkty/idproduktu/tytulproduktu`</p>
+                    </div>
+
+                    <button type="submit" class="sm:col-span-2 py-3 bg-brandViolet text-white font-bold rounded-custom">Zapisz produkt</button>
+                </form>
+            </div>
+
+            <div class="bg-white p-6 rounded-custom border shadow-sm">
+                <h3 class="font-condensed text-lg mb-3">Lista Produktów</h3>
+                <div id="admin-products-list" class="space-y-2"></div>
+            </div>
+        </section>
+
+        <!-- 2. Kody Zniżkowe -->
+        <section id="sec-coupons" class="space-y-6 hidden">
+            <div class="bg-white p-6 rounded-custom border shadow-sm">
+                <h2 class="text-lg font-condensed mb-4">Dodaj Kod Zniżkowy</h2>
+                <form id="coupon-form" onsubmit="saveCoupon(event)" class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                    <input type="text" id="c-code" placeholder="Kod (np. LATO2026)" class="p-2.5 border rounded-custom" required>
+                    <select id="c-type" class="p-2.5 border rounded-custom">
+                        <option value="percent">Procentowy (%)</option>
+                        <option value="amount">Kwotowy (PLN)</option>
+                    </select>
+                    <input type="number" step="0.01" id="c-value" placeholder="Wartość obniżki" class="p-2.5 border rounded-custom" required>
+                    <input type="number" id="c-limit" placeholder="Limit użyć (opcjonalnie)" class="p-2.5 border rounded-custom">
+                    <input type="datetime-local" id="c-valid" class="p-2.5 border rounded-custom">
+                    <button type="submit" class="sm:col-span-2 py-3 bg-brandPink text-white font-bold rounded-custom">Stwórz kod</button>
+                </form>
+            </div>
+            <div class="bg-white p-6 rounded-custom border shadow-sm">
+                <div id="admin-coupons-list" class="space-y-2"></div>
+            </div>
+        </section>
+
+        <!-- 3. Zamówienia -->
+        <section id="sec-orders" class="space-y-6 hidden">
+            <div class="bg-white p-6 rounded-custom border shadow-sm">
+                <h2 class="text-lg font-condensed mb-4">Wszystkie Zamówienia</h2>
+                <div id="admin-orders-list" class="space-y-3"></div>
+            </div>
+        </section>
+
+        <!-- 4. Opinie -->
+        <section id="sec-reviews" class="space-y-6 hidden">
+            <div class="bg-white p-6 rounded-custom border shadow-sm">
+                <h2 class="text-lg font-condensed mb-4">Moderacja Opinii</h2>
+                <div id="admin-reviews-list" class="space-y-3"></div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        const SUPABASE_URL = "https://fxksikgdberwgttvglko.supabase.co";
+        const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ4a3Npa2dkYmVyd2d0dHZnbGtvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA0MzU3NzYsImV4cCI6MjEwNjAxMTc3Nn0.sKf3vvVbaae5-mdg5zwqrgUl6AkXjENanwhDWbH_PXw";
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        function showToast(m) {
+            const t = document.getElementById('toast');
+            document.getElementById('toast-message').innerText = m;
+            t.classList.remove('translate-x-full');
+            setTimeout(() => t.classList.add('translate-x-full'), 3000);
+        }
+
+        function switchAdminTab(name) {
+            ['products', 'coupons', 'orders', 'reviews'].forEach(s => {
+                document.getElementById(`sec-${s}`).classList.add('hidden');
+                document.getElementById(`admin-tab-${s}`).classList.remove('active');
+            });
+            document.getElementById(`sec-${name}`).classList.remove('hidden');
+            document.getElementById(`admin-tab-${name}`).classList.add('active');
+        }
+
+        async function checkAdmin() {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) { window.location.href = '/api-login/?login'; return; }
+
+            const { data: profile } = await supabase.from('profiles').select('role').eq('id', session.user.id).single();
+            if (profile?.role !== 'admin') {
+                alert('Brak uprawnień administratora.');
+                window.location.href = '/mojekonto';
+                return;
+            }
+
+            loadAdminProducts();
+            loadAdminCoupons();
+            loadAdminOrders();
+            loadAdminReviews();
+        }
+
+        async function saveProduct(e) {
+            e.preventDefault();
+            const productData = {
+                title: document.getElementById('p-title').value,
+                slug: document.getElementById('p-slug').value,
+                description: document.getElementById('p-desc').value,
+                price: parseFloat(document.getElementById('p-price').value),
+                price_before_30_days: parseFloat(document.getElementById('p-price-30').value || 0),
+                is_discounted: document.getElementById('p-is-discount').checked,
+                discount_price: parseFloat(document.getElementById('p-discount-price').value || 0),
+                product_type: document.getElementById('p-type').value,
+                category: document.getElementById('p-category').value,
+                images: document.getElementById('p-images').value.split(',').map(s => s.trim()),
+                download_files: JSON.parse(document.getElementById('p-files').value || '[]')
+            };
+
+            const { error } = await supabase.from('products').insert(productData);
+            if (!error) { showToast('Produkt dodany!'); loadAdminProducts(); }
+        }
+
+        async function loadAdminProducts() {
+            const { data } = await supabase.from('products').select('*');
+            document.getElementById('admin-products-list').innerHTML = (data || []).map(p => `
+                <div class="p-3 border rounded-custom flex justify-between items-center text-xs">
+                    <div>
+                        <span class="font-bold">${p.title}</span>
+                        <span class="text-gray-400 block">/produkty/${p.id}/${p.slug}</span>
+                    </div>
+                    <button onclick="deleteProduct('${p.id}')" class="text-red-500 font-bold">Usuń</button>
+                </div>
+            `).join('');
+        }
+
+        async function deleteProduct(id) {
+            await supabase.from('products').delete().eq('id', id);
+            loadAdminProducts();
+        }
+
+        async function loadAdminReviews() {
+            const { data } = await supabase.from('reviews').select('*');
+            const pending = (data || []).filter(r => r.status === 'pending').length;
+            document.getElementById('pending-reviews-count').innerText = pending;
+
+            document.getElementById('admin-reviews-list').innerHTML = (data || []).map(r => `
+                <div class="p-3 border rounded-custom text-xs flex justify-between items-center">
+                    <div>
+                        <span class="font-bold">${r.author_name}</span> (${r.rating}★): ${r.comment}
+                        <span class="block text-gray-400">Status: ${r.status}</span>
+                    </div>
+                    <div class="space-x-2">
+                        <button onclick="approveReview('${r.id}')" class="text-green-600 font-bold">Zatwierdź</button>
+                        <button onclick="deleteReview('${r.id}')" class="text-red-600 font-bold">Usuń</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function approveReview(id) {
+            await supabase.from('reviews').update({ status: 'approved' }).eq('id', id);
+            loadAdminReviews();
+        }
+
+        async function deleteReview(id) {
+            await supabase.from('reviews').delete().eq('id', id);
+            loadAdminReviews();
+        }
+
+        async function loadAdminOrders() {
+            const { data } = await supabase.from('orders').select('*').order('created_at', { ascending: false });
+            document.getElementById('admin-orders-list').innerHTML = (data || []).map(o => `
+                <div class="p-3 border rounded-custom text-xs flex justify-between items-center">
+                    <div>
+                        <span class="font-bold">#${o.order_number}</span> - ${parseFloat(o.total_amount).toFixed(2)} PLN
+                        <span class="block text-gray-400">${new Date(o.created_at).toLocaleString()}</span>
+                    </div>
+                    <span class="font-bold uppercase ${o.status === 'paid' ? 'text-green-600' : 'text-amber-600'}">${o.status}</span>
+                </div>
+            `).join('');
+        }
+
+        async function saveCoupon(e) { e.preventDefault(); /* ... logika dodawania kuponu ... */ }
+        async function loadAdminCoupons() { /* ... pobieranie kuponów ... */ }
+
+        document.addEventListener('DOMContentLoaded', checkAdmin);
+    </script>
+</body>
+</html>
