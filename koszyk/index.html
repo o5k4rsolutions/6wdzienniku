@@ -57,7 +57,7 @@
 
                     <div class="flex gap-2">
                         <input type="text" id="coupon-code" placeholder="Kod rabatowy" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-custom focus:outline-none focus:border-brandViolet uppercase">
-                        <button onclick="applyCoupon()" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 text-xs font-semibold rounded-custom transition">Zastosuj</button>
+                        <button type="button" onclick="applyCoupon()" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 text-xs font-semibold rounded-custom transition">Zastosuj</button>
                     </div>
 
                     <div class="space-y-2 text-sm border-t border-b border-gray-100 py-4">
@@ -107,7 +107,7 @@
         const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ4a3Npa2dkYmVyd2d0dHZnbGtvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA0MzU3NzYsImV4cCI6MjEwNjAxMTc3Nn0.sKf3vvVbaae5-mdg5zwqrgUl6AkXjENanwhDWbH_PXw";
         const STRIPE_PK = "pk_live_51U9Lv5Q2ih8UDd9IQJ2lVSHCayHb6qrJUN1y8i3za2f6GZNA0sv4H5tBsFcdbyZAOHL3nvJvQCCA76XYtvBow0kL00yLvmCiTI";
         
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         const stripe = Stripe(STRIPE_PK);
 
         let elements = null;
@@ -116,6 +116,7 @@
 
         function showToast(msg) {
             const toast = document.getElementById('toast');
+            if (!toast) return;
             document.getElementById('toast-message').innerText = msg;
             toast.classList.remove('translate-x-full');
             setTimeout(() => toast.classList.add('translate-x-full'), 3000);
@@ -142,6 +143,8 @@
         function renderCart() {
             const cart = getCartItems();
             const container = document.getElementById('cart-items-container');
+
+            if (!container) return;
 
             if (!cart || cart.length === 0) {
                 container.innerHTML = '<p class="text-gray-500 font-sans">Twój koszyk jest pusty.</p>';
@@ -170,7 +173,7 @@
                         </div>
                         <div class="flex items-center gap-2">
                             <span class="text-xs text-gray-500">Ilość: ${quantity}</span>
-                            <button onclick="removeItem(${index})" class="p-1 text-gray-400 hover:text-red-500 transition" title="Usuń z koszyka">
+                            <button type="button" onclick="removeItem(${index})" class="p-1 text-gray-400 hover:text-red-500 transition" title="Usuń z koszyka">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                             </button>
                         </div>
@@ -190,15 +193,15 @@
             document.getElementById('total-val').innerText = `${total.toFixed(2)} PLN`;
         }
 
-        function removeItem(idx) {
+        window.removeItem = function(idx) {
             let cart = getCartItems();
             cart.splice(idx, 1);
             localStorage.setItem('cart', JSON.stringify(cart));
             renderCart();
             initCheckout();
-        }
+        };
 
-        async function applyCoupon() {
+        window.applyCoupon = async function() {
             const codeInput = document.getElementById('coupon-code');
             const code = codeInput.value.trim().toUpperCase();
 
@@ -207,11 +210,11 @@
                 return;
             }
 
-            const { data: coupon, error } = await supabase
+            const { data: coupon, error } = await supabaseClient
                 .from('coupons')
                 .select('*')
                 .eq('code', code)
-                .single();
+                .maybeSingle();
 
             if (error || !coupon) {
                 showToast('Niepoprawny kod rabatowy.');
@@ -223,23 +226,23 @@
             showToast(`Zastosowano kod! Rabat: ${discountPercent}%`);
             renderCart();
             initCheckout();
-        }
+        };
 
         async function initCheckout() {
-            const { data: { session } } = await supabase.auth.getSession();
-            const cart = getCartItems();
-            
-            if (session) {
-                document.getElementById('auth-section').classList.add('hidden');
-                document.getElementById('checkout-section').classList.remove('hidden');
-                document.getElementById('user-info-box').innerText = `Zalogowano jako: ${session.user.email}`;
+            try {
+                const { data: { session } } = await supabaseClient.auth.getSession();
+                const cart = getCartItems();
+                
+                if (session) {
+                    document.getElementById('auth-section').classList.add('hidden');
+                    document.getElementById('checkout-section').classList.remove('hidden');
+                    document.getElementById('user-info-box').innerText = `Zalogowano jako: ${session.user.email}`;
 
-                if (!cart || cart.length === 0) {
-                    document.getElementById('checkout-section').classList.add('hidden');
-                    return;
-                }
+                    if (!cart || cart.length === 0) {
+                        document.getElementById('checkout-section').classList.add('hidden');
+                        return;
+                    }
 
-                try {
                     const response = await fetch('/api/create-payment-intent', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -263,14 +266,17 @@
                     paymentContainer.innerHTML = ''; 
                     paymentElement.mount('#payment-element');
 
-                } catch (err) {
-                    const msg = document.getElementById('payment-message');
+                } else {
+                    document.getElementById('auth-section').classList.remove('hidden');
+                    document.getElementById('checkout-section').classList.add('hidden');
+                }
+            } catch (err) {
+                console.error("Błąd checkout:", err);
+                const msg = document.getElementById('payment-message');
+                if (msg) {
                     msg.innerText = err.message;
                     msg.classList.remove('hidden');
                 }
-            } else {
-                document.getElementById('auth-section').classList.remove('hidden');
-                document.getElementById('checkout-section').classList.add('hidden');
             }
         }
 
