@@ -89,7 +89,10 @@
     <script>
         const SUPABASE_URL = "https://fxksikgdberwgttvglko.supabase.co";
         const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ4a3Npa2dkYmVyd2d0dHZnbGtvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA0MzU3NzYsImV4cCI6MjEwNjAxMTc3Nn0.sKf3vvVbaae5-mdg5zwqrgUl6AkXjENanwhDWbH_PXw";
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        let cachedProducts = [];
 
         function showToast(message) {
             const toast = document.getElementById('toast');
@@ -110,9 +113,15 @@
             }
         }
 
-        function addToCart(product) {
+        function addToCartById(productId) {
+            const product = cachedProducts.find(p => p.id === productId);
+            if (!product) return;
+
             let cart = JSON.parse(localStorage.getItem('cart') || '[]');
             const existing = cart.find(item => item.id === product.id);
+            const images = Array.isArray(product.images) && product.images.length > 0 ? product.images : [];
+            const firstImage = images[0] || 'https://via.placeholder.com/300';
+
             if (existing) {
                 existing.quantity += 1;
             } else {
@@ -120,7 +129,7 @@
                     id: product.id,
                     title: product.title,
                     price: product.is_discounted ? product.discount_price : product.price,
-                    image: product.images[0] || 'https://via.placeholder.com/300',
+                    image: firstImage,
                     quantity: 1,
                     slug: product.slug
                 });
@@ -131,7 +140,7 @@
         }
 
         async function loadProducts() {
-            const { data: products, error } = await supabase.from('products').select('*');
+            const { data: products, error } = await supabaseClient.from('products').select('*');
             const grid = document.getElementById('products-grid');
 
             if (error || !products || products.length === 0) {
@@ -139,9 +148,12 @@
                 return;
             }
 
+            cachedProducts = products;
+
             grid.innerHTML = products.map(product => {
                 const currentPrice = product.is_discounted ? product.discount_price : product.price;
-                const firstImage = product.images[0] || 'https://images.unsplash.com/photo-1434030216411-0b793f4b4173?auto=format&fit=crop&w=600&q=80';
+                const images = Array.isArray(product.images) && product.images.length > 0 ? product.images : [];
+                const firstImage = images[0] || 'https://images.unsplash.com/photo-1434030216411-0b793f4b4173?auto=format&fit=crop&w=600&q=80';
                 const productUrl = `/produkty/${product.id}/${product.slug}`;
 
                 return `
@@ -163,7 +175,7 @@
                                     ${product.is_discounted ? `<span class="text-xs text-gray-400 line-through ml-1.5">${parseFloat(product.price).toFixed(2)} PLN</span>` : ''}
                                 </div>
 
-                                <button onclick='addToCart(${JSON.stringify(product).replace(/'/g, "&apos;")})' class="btn-sweep px-3.5 py-2 border border-brandPink text-brandPink font-semibold rounded-custom text-xs bg-white">
+                                <button onclick="addToCartById('${product.id}')" class="btn-sweep px-3.5 py-2 border border-brandPink text-brandPink font-semibold rounded-custom text-xs bg-white">
                                     <svg class="w-4 h-4 stroke-brandPink mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path>
                                     </svg>
