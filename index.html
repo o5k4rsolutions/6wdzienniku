@@ -171,24 +171,31 @@
         @keyframes sheetCrumbleOut {
             0% {
                 transform: scale(1) rotate(0deg);
-                border-radius: 20px;
+                border-radius: 1rem;
                 opacity: 1;
+                filter: blur(0px) brightness(1);
             }
-            30% {
-                transform: scale(0.8) rotate(12deg) skewX(10deg);
-                border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%;
-                filter: contrast(150%) brightness(90%);
+            25% {
+                transform: scale(0.9) rotate(-8deg) skewX(-15deg);
+                border-radius: 35% 65% 50% 50% / 40% 40% 60% 60%;
+                filter: contrast(120%) brightness(95%);
             }
-            60% {
-                transform: scale(0.4) rotate(-45deg) translate(50px, -50px);
+            50% {
+                transform: scale(0.6) rotate(25deg) skewY(15deg) translate(20px, -20px);
+                border-radius: 50% 40% 60% 30% / 60% 30% 50% 50%;
+                filter: contrast(160%) brightness(80%) blur(1px);
+            }
+            75% {
+                transform: scale(0.3) rotate(-60deg) translate(100px, -150px);
                 border-radius: 50%;
-                box-shadow: 0 0 50px rgba(0,0,0,0.5);
-                opacity: 0.9;
+                filter: contrast(200%) brightness(60%) blur(2px);
+                opacity: 0.8;
             }
             100% {
-                transform: scale(0) rotate(180deg) translate(800px, -1000px);
+                transform: scale(0.05) rotate(180deg) translate(400px, -600px);
                 border-radius: 50%;
                 opacity: 0;
+                filter: blur(4px);
             }
         }
 
@@ -197,7 +204,7 @@
         }
 
         .animate-sheet-out {
-            animation: sheetCrumbleOut 0.75s ease-in-out forwards;
+            animation: sheetCrumbleOut 0.75s cubic-bezier(0.55, 0.055, 0.675, 0.19) forwards;
         }
 
         .reveal {
@@ -450,8 +457,8 @@
     </footer>
 
     <div id="cookie-overlay" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-        <div id="cookie-paper" class="paper-texture w-full max-w-xl p-8 sm:p-10 rounded-2xl shadow-2xl border-2 border-purple-200 relative animate-sheet-in">
-            <div class="absolute top-0 bottom-0 left-8 sm:left-12 w-0.5 bg-red-300 opacity-60"></div>
+        <div id="cookie-paper" class="paper-texture w-full max-w-xl p-8 sm:p-10 rounded-2xl shadow-2xl border-2 border-purple-200 relative animate-sheet-in transition-all">
+            <div id="paper-margin-line" class="absolute top-0 bottom-0 left-8 sm:left-12 w-0.5 bg-red-300 opacity-60 transition-all"></div>
             
             <div class="pl-6 sm:pl-10">
                 <div class="flex items-center space-x-3 mb-4">
@@ -505,16 +512,30 @@
     </div>
 
     <script>
+        window.addEventListener('DOMContentLoaded', () => {
+            const cookieConsent = localStorage.getItem('6wdzienniku_cookie_consent');
+            if (cookieConsent) {
+                const overlay = document.getElementById('cookie-overlay');
+                overlay.style.display = 'none';
+            }
+        });
+
         function closeCookies(option) {
+            localStorage.setItem('6wdzienniku_cookie_consent', option);
+
             const paper = document.getElementById('cookie-paper');
             const overlay = document.getElementById('cookie-overlay');
+            const marginLine = document.getElementById('paper-margin-line');
+
+            marginLine.style.transform = 'rotate(45deg) scaleY(1.5)';
+            marginLine.style.opacity = '0';
 
             paper.classList.remove('animate-sheet-in');
             paper.classList.add('animate-sheet-out');
 
             setTimeout(() => {
                 overlay.style.display = 'none';
-            }, 700);
+            }, 750);
         }
 
         const track = document.getElementById('reviews-track');
