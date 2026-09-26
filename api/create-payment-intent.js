@@ -1,14 +1,27 @@
-import { createClient } from '@supabase/supabase-js';
-import Stripe from 'stripe';
+const Stripe = require('stripe');
+const { createClient } = require('@supabase/supabase-js');
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
-export default async function handler(req, res) {
+module.exports = async (req, res) => {
+  // Obsługa nagłówków CORS (jeśli frontend i backend są pod innymi adresami)
+  res.setHeader('Access-Control-Allow-Credentials', true);
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
+  res.setHeader(
+    'Access-Control-Allow-Headers',
+    'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
+  );
+
+  if (req.method === 'OPTIONS') {
+    res.status(200).end();
+    return;
+  }
+
   if (req.method !== 'POST') {
     return res.status(405).json({ message: 'Method Not Allowed' });
   }
@@ -24,10 +37,8 @@ export default async function handler(req, res) {
       return res.status(401).json({ message: 'Brak autoryzacji użytkownika' });
     }
 
-    // 1. Obliczenie wartości produktów po stronie serwera (bezpieczeństwo)
     let subtotal = 0;
     for (const item of items) {
-      // Pobieramy aktualną cenę z bazy danych dla pewności
       const { data: product } = await supabase
         .from('products')
         .select('price')
@@ -42,7 +53,6 @@ export default async function handler(req, res) {
     let discountPercent = 0;
     let appliedCouponId = null;
 
-    // 2. Obsługa i weryfikacja kuponu rabatowego
     if (couponCode) {
       const { data: coupon } = await supabase
         .from('coupons')
@@ -58,9 +68,8 @@ export default async function handler(req, res) {
 
     const discountAmount = (subtotal * discountPercent) / 100;
     const finalAmount = Math.max(0, subtotal - discountAmount);
-    const amountInCents = Math.round(finalAmount * 100); // Stripe przyjmuje kwoty w groszach/centach
+    const amountInCents = Math.round(finalAmount * 100);
 
-    // 3. Utworzenie rekordu zamówienia w bazie Supabase ze statusem 'pending'
     const { data: order, error: orderError } = await supabase
       .from('orders')
       .insert({
@@ -79,7 +88,6 @@ export default async function handler(req, res) {
       throw new Error(`Błąd zapisu zamówienia: ${orderError.message}`);
     }
 
-    // 4. Utworzenie PaymentIntent w Stripe
     const paymentIntent = await stripe.paymentIntents.create({
       amount: amountInCents,
       currency: 'pln',
@@ -90,13 +98,11 @@ export default async function handler(req, res) {
       }
     });
 
-    // Zaktualizowanie zamówienia o ID płatności Stripe
     await supabase
       .from('orders')
       .update({ stripe_payment_intent_id: paymentIntent.id })
       .eq('id', order.id);
 
-    // 5. Zwrócenie klienta secret do frontendu
     return res.status(200).json({
       clientSecret: paymentIntent.client_secret,
       orderId: order.id
@@ -106,4 +112,4 @@ export default async function handler(req, res) {
     console.error('Błąd w create-payment-intent:', error);
     return res.status(500).json({ message: error.message || 'Błąd serwera' });
   }
-}
+};
