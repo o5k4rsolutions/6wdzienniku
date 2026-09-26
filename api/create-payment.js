@@ -1,22 +1,39 @@
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
-const { createClient } = require('@supabase/supabase-js');
+import Stripe from 'stripe';
 
-const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+// Pobiera tajny klucz z ustawień środowiskowych Vercela (Environment Variables)
+// Nigdy nie wpisuj tu klucza "sk_test_..." na sztywno!
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 export default async function handler(req, res) {
-    if (req.method !== 'POST') return res.status(405).end();
-    const { productIds, discountCode } = req.body; 
+    if (req.method !== 'POST') {
+        return res.status(405).json({ error: 'Metoda niedozwolona' });
+    }
 
-    const { data: products } = await supabase.from('products').select('id, price').in('id', productIds);
-    
-    let totalAmount = products.reduce((sum, p) => sum + p.price, 0);
+    try {
+        const { productIds } = req.body;
 
+        if (!productIds || productIds.length === 0) {
+            return res.status(400).json({ error: 'Koszyk jest pusty' });
+        }
+        
+        const amountToCharge = productIds.length * 2900; // Stripe operuje na groszach (2900 = 29.00 PLN)
 
-    const paymentIntent = await stripe.paymentIntents.create({
-        amount: Math.round(totalAmount * 100), 
-        currency: 'pln',
-        automatic_payment_methods: { enabled: true }, 
-    });
+        // Utworzenie intencji płatności w Stripe
+        const paymentIntent = await stripe.paymentIntents.create({
+            amount: amountToCharge,
+            currency: 'pln',
+            automatic_payment_methods: {
+                enabled: true, // Włącza Blik, Karty, Apple Pay automatycznie
+            },
+        });
 
-    res.send({ clientSecret: paymentIntent.client_secret });
+        // Odsyłamy wygenerowany sekretny klucz klienta do HTML-a
+        res.status(200).json({
+            clientSecret: paymentIntent.client_secret,
+        });
+
+    } catch (error) {
+        console.error("Błąd generowania płatności:", error);
+        res.status(500).json({ error: 'Błąd serwera podczas generowania płatności' });
+    }
 }
