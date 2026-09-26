@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Moje Konto - 6 w Dzienniku</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = { theme: { extend: { colors: { brandPurple: '#5B21B6', brandPink: '#EC4899' } } } }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>body { font-family: 'Poppins', sans-serif; }</style>
+</head>
+<body class="bg-[#FAFAFC] text-slate-800 min-h-screen flex flex-col">
+
+    <header class="w-full bg-white border-b border-purple-100">
+        <div class="max-w-4xl mx-auto px-6 h-20 flex items-center justify-between">
+            <a href="/" class="font-bold text-xl text-[#5B21B6]">6 w Dzienniku</a>
+            <button onclick="logout()" class="text-sm font-semibold text-slate-500 hover:text-red-500 transition-colors">Wyloguj się</button>
+        </div>
+    </header>
+
+    <main class="flex-grow max-w-4xl mx-auto px-6 py-12 w-full hidden" id="dashboard-content">
+        <div class="mb-8">
+            <h1 class="text-3xl font-extrabold text-slate-900 mb-2">Cześć, <span id="user-name">...</span>!</h1>
+            <p class="text-slate-500">Oto Twoje zakupione materiały i testy.</p>
+        </div>
+
+        <div id="orders-list" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="p-6 bg-white rounded-2xl border border-slate-100 shadow-sm text-center text-slate-500 col-span-full">
+                Ładowanie Twoich materiałów...
+            </div>
+        </div>
+    </main>
+
+    <div id="loading-screen" class="fixed inset-0 bg-[#FAFAFC] flex items-center justify-center z-50">
+        <p class="text-[#5B21B6] font-bold animate-pulse">Weryfikacja dostępu...</p>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://kzdovdyzqvbuiqnorati.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt6ZG92ZHl6cXZidWlxbm9yYXRpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA0MDQwMjYsImV4cCI6MjEwNTk4MDAyNn0.4gbSDcQhl8KsJmPmuyjtaf2vg8RLsxWyOO7IzjkzzW8';
+        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        async function initDashboard() {
+            const { data: { session }, error } = await supabase.auth.getSession();
+            
+            if (error || !session) {
+                window.location.href = '/sklep'; 
+                return;
+            }
+
+            document.getElementById('loading-screen').classList.add('hidden');
+            document.getElementById('dashboard-content').classList.remove('hidden');
+            
+            const userName = session.user.user_metadata?.first_name || session.user.email.split('@')[0];
+            document.getElementById('user-name').innerText = userName;
+
+            fetchUserOrders(session.user.id);
+        }
+
+        async function fetchUserOrders(userId) {
+            const { data, error } = await supabase
+                .from('orders')
+                .select('*, products(title, download_url)')
+                .eq('user_id', userId)
+                .eq('status', 'paid');
+
+            const container = document.getElementById('orders-list');
+            
+            if (error || !data || data.length === 0) {
+                container.innerHTML = `
+                    <div class="p-6 bg-white rounded-2xl border border-slate-100 shadow-sm text-center col-span-full">
+                        <p class="text-slate-500 mb-4">Nie masz jeszcze żadnych zakupionych materiałów.</p>
+                        <a href="/sklep" class="text-[#5B21B6] font-bold hover:underline">Przejdź do sklepu</a>
+                    </div>`;
+                return;
+            }
+
+            container.innerHTML = '';
+            data.forEach(order => {
+                container.innerHTML += `
+                    <div class="p-6 bg-white rounded-2xl border border-purple-100 shadow-sm flex flex-col justify-between">
+                        <div>
+                            <h3 class="font-bold text-lg text-slate-900 mb-1">${order.products.title}</h3>
+                            <p class="text-xs text-slate-400 mb-4">Data zakupu: ${new Date(order.created_at).toLocaleDateString('pl-PL')}</p>
+                        </div>
+                        <a href="${order.products.download_url}" target="_blank" class="block w-full text-center bg-[#5B21B6] text-white font-semibold py-2.5 rounded-xl hover:bg-[#EC4899] transition-colors">
+                            Pobierz Materiały
+                        </a>
+                    </div>`;
+            });
+        }
+
+        async function logout() {
+            await supabase.auth.signOut();
+            window.location.href = '/sklep';
+        }
+
+        window.onload = initDashboard;
+    </script>
+</body>
+</html>
