@@ -32,13 +32,14 @@
 
     <header class="w-full bg-white border-b py-4">
         <div class="max-w-7xl mx-auto px-4 text-center">
-            <a href="https://6wdzienniku.vercel.app/"><img src="https://6wdzienniku.vercel.app/6-content/logo_6wdzienn_kolor.png" class="h-16 mx-auto" alt="6WDzienniku"></a>
+            <a href="/"><span class="text-2xl font-bold text-brandViolet font-condensed">6WDZIENNIKU</span></a>
         </div>
     </header>
 
     <main class="flex-grow flex items-center justify-center p-4">
         <div class="bg-white p-8 rounded-custom border border-gray-200 shadow-md w-full max-w-md">
             
+            <!-- FORMULARZ LOGOWANIA -->
             <div id="form-login" class="space-y-4">
                 <h1 class="text-2xl text-center text-gray-900">Zaloguj się</h1>
                 <form onsubmit="handleLogin(event)" class="space-y-3">
@@ -53,6 +54,7 @@
                 </form>
             </div>
 
+            <!-- FORMULARZ REJESTRACJI -->
             <div id="form-rejestracja" class="space-y-4 hidden">
                 <h1 class="text-2xl text-center text-gray-900">Załóż konto</h1>
                 <form onsubmit="handleRegister(event)" class="space-y-3">
@@ -67,6 +69,7 @@
                 </form>
             </div>
 
+            <!-- FORMULARZ RESETU HASŁA -->
             <div id="form-reset" class="space-y-4 hidden">
                 <h1 class="text-2xl text-center text-gray-900">Odzyskaj hasło</h1>
                 <form onsubmit="handleForgot(event)" class="space-y-3">
@@ -82,17 +85,15 @@
         </div>
     </main>
 
-    <footer class="bg-white border-t border-gray-200 py-8 text-center text-sm text-gray-500">
-        <div class="max-w-6xl mx-auto px-4 space-y-1">
-            <p>© 2026 <b>6WDzienniku</b></p>
-            <p>Wszelkie prawa zastrzeżone.</p>
-        </div>
+    <footer class="bg-white border-t py-6 text-center text-xs text-gray-500">
+        © 2026 <b>6WDzienniku</b>
     </footer>
 
     <script>
         const SUPABASE_URL = "https://fxksikgdberwgttvglko.supabase.co";
         const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ4a3Npa2dkYmVyd2d0dHZnbGtvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA0MzU3NzYsImV4cCI6MjEwNjAxMTc3Nn0.sKf3vvVbaae5-mdg5zwqrgUl6AkXjENanwhDWbH_PXw";
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         function showToast(m) {
             const t = document.getElementById('toast');
@@ -131,7 +132,7 @@
             const email = document.getElementById('l-email').value;
             const password = document.getElementById('l-password').value;
 
-            const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+            const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
             if (error) { showToast(error.message); } 
             else { window.location.href = '/mojekonto'; }
         }
@@ -142,7 +143,7 @@
             const password = document.getElementById('r-password').value;
             const fullName = document.getElementById('r-name').value;
 
-            const { data, error } = await supabase.auth.signUp({
+            const { data, error } = await supabaseClient.auth.signUp({
                 email, 
                 password, 
                 options: { data: { full_name: fullName } }
@@ -159,7 +160,7 @@
         async function handleForgot(e) {
             e.preventDefault();
             const email = document.getElementById('f-email').value;
-            const { error } = await supabase.auth.resetPasswordForEmail(email, {
+            const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
                 redirectTo: 'https://6wdzienniku.vercel.app/mojekonto'
             });
             if (error) { 
@@ -173,7 +174,7 @@
         window.onpopstate = function() {
             initFormFromUrl();
         };
-        
+
         document.addEventListener('DOMContentLoaded', initFormFromUrl);
     </script>
 </body>
