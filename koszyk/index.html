@@ -97,11 +97,21 @@
 
                     <div id="checkout-section" class="hidden">
                         <div id="user-info-box" class="text-xs text-gray-500 mb-4"></div>
-                        <form id="payment-form">
-                            <div id="payment-element" class="mb-4"></div>
-                            <button id="submit-btn" type="submit" class="w-full py-3.5 bg-gradient-to-r from-brandViolet to-brandPink text-white font-bold rounded-custom shadow-md hover:opacity-95 transition disabled:opacity-50">Zapłać teraz</button>
-                            <div id="payment-message" class="text-xs text-red-500 mt-2 hidden"></div>
-                        </form>
+                        
+                        <div id="stripe-container">
+                            <form id="payment-form">
+                                <div id="payment-element" class="mb-4"></div>
+                                <button id="submit-btn" type="submit" class="w-full py-3.5 bg-gradient-to-r from-brandViolet to-brandPink text-white font-bold rounded-custom shadow-md hover:opacity-95 transition disabled:opacity-50">Zapłać teraz</button>
+                                <div id="payment-message" class="text-xs text-red-500 mt-2 hidden"></div>
+                            </form>
+                        </div>
+
+                        <div id="free-order-container" class="hidden space-y-3">
+                            <div class="bg-green-50 border border-green-200 p-3 rounded-custom text-xs text-green-800 font-medium">
+                                Twoje zamówienie jest całkowicie darmowe! Nie musisz podawać karty płatniczej.
+                            </div>
+                            <button type="button" id="free-submit-btn" onclick="processFreeOrder()" class="w-full py-3.5 bg-green-600 hover:bg-green-700 text-white font-bold rounded-custom shadow-md transition">Odbierz za darmo</button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -126,6 +136,7 @@
         let elements = null;
         let appliedCouponCode = null;
         let discountPercent = 0;
+        let currentTotalValue = 0;
 
         function showToast(msg) {
             const toast = document.getElementById('toast');
@@ -168,12 +179,13 @@
                 document.getElementById('subtotal-val').innerText = '0.00 PLN';
                 document.getElementById('discount-row').classList.add('hidden');
                 document.getElementById('total-val').innerText = '0.00 PLN';
+                currentTotalValue = 0;
                 return;
             }
 
             const subtotal = calculateCartSubtotal();
             const discountAmount = (subtotal * discountPercent) / 100;
-            const total = Math.max(0, subtotal - discountAmount);
+            currentTotalValue = Math.max(0, subtotal - discountAmount);
 
             container.innerHTML = cart.map((item, index) => {
                 const price = (parseFloat(item.price) || 0).toFixed(2);
@@ -207,7 +219,7 @@
                 document.getElementById('discount-row').classList.add('hidden');
             }
 
-            document.getElementById('total-val').innerText = `${total.toFixed(2)} PLN`;
+            document.getElementById('total-val').innerText = `${currentTotalValue.toFixed(2)} PLN`;
         }
 
         window.removeItem = function(idx) {
@@ -250,7 +262,7 @@
             }
 
             appliedCouponCode = coupon.code;
-            discountPercent = coupon.discount_percent || 0;
+            discountPercent = coupon.discount_percent || coupon.discount_value || 0; 
 
             document.getElementById('coupon-input-container').classList.add('hidden');
             document.getElementById('coupon-applied-badge').classList.remove('hidden');
@@ -291,6 +303,15 @@
                     if (!cart || cart.length === 0) {
                         document.getElementById('checkout-section').classList.add('hidden');
                         return;
+                    }
+
+                    if (currentTotalValue <= 0) {
+                        document.getElementById('stripe-container').classList.add('hidden');
+                        document.getElementById('free-order-container').classList.remove('hidden');
+                        return;
+                    } else {
+                        document.getElementById('stripe-container').classList.remove('hidden');
+                        document.getElementById('free-order-container').classList.add('hidden');
                     }
 
                     const response = await fetch('/api/create-payment-intent', {
@@ -347,6 +368,55 @@
                 }
             }
         }
+
+        window.processFreeOrder = async function() {
+            const btn = document.getElementById('free-submit-btn');
+            btn.disabled = true;
+            btn.innerText = 'Przetwarzanie...';
+
+            try {
+                const { data: { session } } = await supabaseClient.auth.getSession();
+                const cart = getCartItems();
+
+                if (!session) {
+                    alert('Musisz być zalogowany.');
+                    return;
+                }
+
+                const response = await fetch('/api/create-free-order', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        items: cart,
+                        userId: session.user.id,
+                        couponCode: appliedCouponCode
+                    })
+                });
+
+                let result = {};
+                const contentType = response.headers.get("content-type");
+                if (contentType && contentType.includes("application/json")) {
+                    result = await response.json();
+                }
+
+                if (!response.ok) {
+                    throw new Error(result.message || 'Wystąpił błąd podczas finalizacji darmowego zamówienia.');
+                }
+
+                localStorage.removeItem('cart');
+                
+                showToast('Zamówienie opłacone pomyślnie!');
+                setTimeout(() => {
+                    window.location.href = '/mojekonto?payment_success=true';
+                }, 1000);
+
+            } catch (err) {
+                console.error("Błąd darmowego zamówienia:", err);
+                alert(err.message || 'Wystąpił błąd.');
+                btn.disabled = false;
+                btn.innerText = 'Odbierz za darmo';
+            }
+        };
 
         document.addEventListener('DOMContentLoaded', () => {
             renderCart();
