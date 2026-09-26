@@ -9,7 +9,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Open+Sans+Condensed:ital,wght@0,300;0,700;1,300&family=Open+Sans:ital,wght@0,300;0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
-    
+
     <script>
         tailwind.config = {
             theme: {
@@ -78,10 +78,16 @@
             left: 0;
         }
 
-        .btn-sweep:hover svg {
+        .btn-sweep:hover svg,
+        .btn-sweep:hover path {
             stroke: #ffffff !important;
             fill: #ffffff !important;
             transition: all 0.3s ease;
+        }
+
+        .btn-sweep:hover span {
+            color: #ffffff !important;
+            transition: color 0.3s ease;
         }
 
         .text-gradient {
@@ -105,51 +111,66 @@
 <body class="min-h-screen flex flex-col justify-between">
 
     <header class="w-full bg-white border-b border-gray-200 sticky top-0 z-40">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
-            <a href="https://6wdzienniku.vercel.app/" class="inline-block transition-transform duration-300 hover:scale-105">
-                <img src="https://6wdzienniku.vercel.app/6-content/logo_6wdzienn_kolor.png" 
-                     alt="6 w dzienniku Logo" 
-                     class="h-14 sm:h-16 object-contain">
-            </a>
-            
-            <div class="flex items-center space-x-2 bg-purple-50 border border-purple-100 px-3 py-1.5 rounded-full">
-                <svg class="w-5 h-5 text-brandPink animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
-                </svg>
-                <span class="font-condensed font-bold text-sm text-brandViolet tracking-wider">Błąd 404</span>
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex flex-col md:flex-row items-center justify-between gap-4">
+
+            <div class="flex items-center justify-center md:justify-start w-full md:w-auto">
+                <a href="https://6wdzienniku.vercel.app" class="inline-block transition-transform duration-300 hover:scale-105">
+                    <img src="https://6wdzienniku.vercel.app/6-content/logo_6wdzienn_kolor.png" 
+                         alt="6 w dzienniku Logo" 
+                         class="h-16 sm:h-20 object-contain mx-auto">
+                </a>
             </div>
+
+            <div class="flex items-center justify-center md:justify-end w-full md:w-auto">
+                <div class="btn-sweep px-4 py-2 border border-purple-200 text-brandViolet rounded-custom shadow-sm bg-white cursor-default select-none flex items-center space-x-2">
+                    <svg class="w-5 h-5 text-brandPink transition-colors shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                    </svg>
+                    <span class="text-base font-bold font-condensed tracking-wider text-gradient transition-colors">404</span>
+                </div>
+            </div>
+
         </div>
     </header>
 
-    <main class="flex-grow flex items-center justify-center">
-        <section class="max-w-3xl mx-auto px-4 py-12 md:py-20 text-center reveal active">
-            <div class="bg-white p-8 sm:p-12 rounded-2xl shadow-sm border border-gray-100 space-y-6 relative overflow-hidden">
-                <div class="absolute -top-24 -right-24 w-48 h-48 bg-purple-100 rounded-full blur-3xl opacity-50 pointer-events-none"></div>
-                <div class="absolute -bottom-24 -left-24 w-48 h-48 bg-pink-100 rounded-full blur-3xl opacity-50 pointer-events-none"></div>
+    <main class="flex-grow">
+        <section class="bg-gradient-to-r from-gray-100 via-gray-50 to-purple-50 py-16 md:py-28 border-b border-gray-200 relative overflow-hidden reveal active">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 grid grid-cols-1 md:grid-cols-12 gap-8 items-center">
 
-                <div class="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-purple-50 text-brandViolet mb-2">
-                    <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                    </svg>
+                <div class="md:col-span-7 space-y-6 text-center md:text-left">
+                    <h1 class="text-4xl sm:text-5xl lg:text-6xl text-gray-950 tracking-tight leading-none font-condensed">
+                        UPS! STRONA, KTÓREJ SZUKASZ, <span class="text-gradient">NIE ISTNIEJE</span>.
+                    </h1>
+
+                    <p class="text-gray-600 text-base sm:text-lg max-w-xl mx-auto md:mx-0 leading-relaxed font-sans">
+                        Wygląda na to, że ten link jest błędny lub strona została przeniesiona. Wróć na stronę główną, aby kontynuować drogę po same <span class="text-gradient">szóstki</span>.
+                    </p>
+
+                    <div class="flex flex-col sm:flex-row items-center justify-center md:justify-start gap-4 pt-2">
+                        <a href="https://6wdzienniku.vercel.app" 
+                           class="btn-sweep w-full sm:w-auto px-8 py-3.5 bg-white border-2 border-brandViolet text-brandViolet font-bold text-base rounded-custom shadow-md">
+                           <span>Powróć do strony głównej</span>
+                           <svg class="w-4 h-4 ml-2 stroke-brandViolet" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
+                           </svg>
+                        </a>
+                    </div>
                 </div>
 
-                <h1 class="text-3xl sm:text-4xl text-gray-950 tracking-tight leading-snug font-condensed">
-                    Ups! Strona, której szukasz, <span class="text-gradient">nie istnieje</span>.
-                </h1>
-
-                <p class="text-gray-600 text-base sm:text-lg max-w-lg mx-auto leading-relaxed font-sans">
-                    Wygląda na to, że ten link jest błędny lub strona została przeniesiona. Wróć na stronę główną, aby kontynuować drogę po same szóstki.
-                </p>
-
-                <div class="pt-4">
-                    <a href="https://6wdzienniku.vercel.app/" 
-                       class="btn-sweep px-8 py-3.5 bg-white border-2 border-brandViolet text-brandViolet font-bold text-base rounded-custom shadow-md inline-flex items-center space-x-2">
-                        <svg class="w-4 h-4 stroke-brandViolet mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
-                        </svg>
-                        <span>Powróć do strony głównej</span>
-                    </a>
-                </div>
+                <div class="md:col-span-5 flex justify-center items-center">
+                    <div class="relative w-full max-w-md bg-white p-8 sm:p-10 rounded-custom shadow-xl border border-purple-100 transform md:rotate-1 hover:rotate-0 transition duration-500 text-center flex flex-col items-center justify-center">
+                        
+                        <div class="relative mb-6">
+                            <div class="absolute -inset-1 rounded-full bg-gradient-to-r from-brandViolet to-brandPink opacity-20 blur-lg"></div>
+                            <div class="relative w-32 h-32 sm:w-40 sm:h-40 bg-purple-50 rounded-full flex items-center justify-center border-4 border-white shadow-inner mx-auto">
+                                <svg class="w-20 h-20 text-brandViolet" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="text-6xl font-black text-gradient font-condensed tracking-wider mb-2">404</div>
+                        <h3 class="text-xl font-bold font-condensed text-gray-900 mb-1">Strona nie znaleziona</h3>
+                    </div>
             </div>
         </section>
     </main>
@@ -161,5 +182,22 @@
         </div>
     </footer>
 
+    <script>
+        function revealOnScroll() {
+            const reveals = document.querySelectorAll('.reveal');
+            for (let i = 0; i < reveals.length; i++) {
+                const windowHeight = window.innerHeight;
+                const elementTop = reveals[i].getBoundingClientRect().top;
+                const elementVisible = 80;
+
+                if (elementTop < windowHeight - elementVisible) {
+                    reveals[i].classList.add('active');
+                }
+            }
+        }
+
+        window.addEventListener('scroll', revealOnScroll);
+        revealOnScroll();
+    </script>
 </body>
 </html>
