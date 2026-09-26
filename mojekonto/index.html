@@ -45,29 +45,29 @@
     <main class="flex-grow max-w-7xl mx-auto px-4 sm:px-6 py-10 w-full">
         <div class="bg-white p-6 rounded-custom border border-gray-200 shadow-sm mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div>
-                <h1 class="text-3xl font-condensed text-gray-900">Witaj, <span id="user-name" class="text-gradient">Użytkowniku</span></h1>
-                <div id="last-order-info" class="text-xs text-gray-500 mt-1">Brak ostatnich zamówień</div>
+                <h1 class="text-3xl font-condensed text-gray-900">Witaj, <span id="user-name" class="text-gradient">Ładowanie...</span></h1>
+                <div id="last-order-info" class="text-xs text-gray-500 mt-1">Sprawdzanie zamówień...</div>
             </div>
-            <button onclick="switchTab('orders')" class="px-4 py-2 border border-brandViolet text-brandViolet font-semibold rounded-custom text-xs hover:bg-purple-50 transition">
+            <button type="button" onclick="switchTab('orders')" class="px-4 py-2 border border-brandViolet text-brandViolet font-semibold rounded-custom text-xs hover:bg-purple-50 transition">
                 Przejdź do zamówień
             </button>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-12 gap-8">
             <aside class="md:col-span-3 space-y-2">
-                <button onclick="switchTab('orders')" id="tab-btn-orders" class="tab-btn active w-full flex items-center gap-3 px-4 py-3 rounded-custom border border-gray-200 text-sm font-semibold transition text-left">
+                <button type="button" onclick="switchTab('orders')" id="tab-btn-orders" class="tab-btn active w-full flex items-center gap-3 px-4 py-3 rounded-custom border border-gray-200 text-sm font-semibold transition text-left">
                     <svg class="w-5 h-5 stroke-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path></svg>
                     Moje zamówienia
                 </button>
-                <button onclick="switchTab('accesses')" id="tab-btn-accesses" class="tab-btn w-full flex items-center gap-3 px-4 py-3 rounded-custom border border-gray-200 text-sm font-semibold transition text-left">
+                <button type="button" onclick="switchTab('accesses')" id="tab-btn-accesses" class="tab-btn w-full flex items-center gap-3 px-4 py-3 rounded-custom border border-gray-200 text-sm font-semibold transition text-left">
                     <svg class="w-5 h-5 stroke-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
                     Moje dostępy (Materiały)
                 </button>
-                <button onclick="switchTab('reviews')" id="tab-btn-reviews" class="tab-btn w-full flex items-center gap-3 px-4 py-3 rounded-custom border border-gray-200 text-sm font-semibold transition text-left">
+                <button type="button" onclick="switchTab('reviews')" id="tab-btn-reviews" class="tab-btn w-full flex items-center gap-3 px-4 py-3 rounded-custom border border-gray-200 text-sm font-semibold transition text-left">
                     <svg class="w-5 h-5 stroke-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"></path></svg>
                     Moje opinie
                 </button>
-                <button onclick="logout()" class="w-full flex items-center gap-3 px-4 py-3 rounded-custom border border-red-200 text-red-600 text-sm font-semibold hover:bg-red-50 transition text-left mt-4">
+                <button type="button" onclick="logout()" class="w-full flex items-center gap-3 px-4 py-3 rounded-custom border border-red-200 text-red-600 text-sm font-semibold hover:bg-red-50 transition text-left mt-4">
                     <svg class="w-5 h-5 stroke-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
                     Wyloguj się
                 </button>
@@ -122,173 +122,227 @@
 
         function showToast(msg) {
             const toast = document.getElementById('toast');
+            if (!toast) return;
             document.getElementById('toast-message').innerText = msg;
             toast.classList.remove('translate-x-full');
             setTimeout(() => toast.classList.add('translate-x-full'), 3000);
         }
 
-        function switchTab(tabName) {
+        window.switchTab = function(tabName) {
             ['orders', 'accesses', 'reviews'].forEach(t => {
-                document.getElementById(`tab-${t}`).classList.add('hidden');
-                document.getElementById(`tab-btn-${t}`).classList.remove('active');
+                const tabEl = document.getElementById(`tab-${t}`);
+                const btnEl = document.getElementById(`tab-btn-${t}`);
+                if (tabEl) tabEl.classList.add('hidden');
+                if (btnEl) btnEl.classList.remove('active');
             });
-            document.getElementById(`tab-${tabName}`).classList.remove('hidden');
-            document.getElementById(`tab-btn-${tabName}`).classList.add('active');
-        }
+
+            const targetTab = document.getElementById(`tab-${tabName}`);
+            const targetBtn = document.getElementById(`tab-btn-${tabName}`);
+
+            if (targetTab) targetTab.classList.remove('hidden');
+            if (targetBtn) targetBtn.classList.add('active');
+        };
+
+        window.logout = async function() {
+            try {
+                await supabase.auth.signOut();
+            } catch (err) {
+                console.error("Błąd wylogowania:", err);
+            } finally {
+                window.location.href = "https://6wdzienniku.vercel.app";
+            }
+        };
 
         async function initAccount() {
-            const { data: { session } } = await supabase.auth.getSession();
-            if (!session) {
-                window.location.href = '/api-login/?login';
-                return;
+            try {
+                const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+                
+                if (sessionError || !session) {
+                    window.location.href = '/api-login/?login';
+                    return;
+                }
+                
+                currentUser = session.user;
+
+                try {
+                    const { data: profile } = await supabase.from('profiles').select('full_name').eq('id', currentUser.id).maybeSingle();
+                    document.getElementById('user-name').innerText = profile?.full_name || currentUser.email || 'Użytkowniku';
+                } catch (e) {
+                    document.getElementById('user-name').innerText = currentUser.email || 'Użytkowniku';
+                }
+
+                await loadOrders();
+                await loadAccesses();
+                await loadReviews();
+
+            } catch (err) {
+                console.error("Błąd inicjalizacji konta:", err);
             }
-            currentUser = session.user;
-
-            const { data: profile } = await supabase.from('profiles').select('*').eq('id', currentUser.id).single();
-            document.getElementById('user-name').innerText = profile?.full_name || currentUser.email;
-
-            await loadOrders();
-            await loadAccesses();
-            await loadReviews();
         }
 
         async function loadOrders() {
-            const { data: orders, error } = await supabase.from('orders').select('*').eq('user_id', currentUser.id).order('created_at', { ascending: false });
             const list = document.getElementById('orders-list');
             const select = document.getElementById('review-product-select');
 
-            if (error || !orders || orders.length === 0) {
-                list.innerHTML = '<p class="text-xs text-gray-500">Brak zamówień.</p>';
-                select.innerHTML = '<option value="" disabled selected>Brak zakupionych produktów do oceny</option>';
-                return;
-            }
+            try {
+                const { data: orders, error } = await supabase.from('orders').select('*').eq('user_id', currentUser.id).order('created_at', { ascending: false });
 
-            const lastOrder = orders[0];
-            const lastItems = typeof lastOrder.items === 'string' ? JSON.parse(lastOrder.items) : lastOrder.items;
-            const extraCount = lastItems.length > 1 ? ` i ${lastItems.length - 1} produktów więcej` : '';
-            document.getElementById('last-order-info').innerText = `Twoje ostatnie zamówienie: #${lastOrder.order_number} (${lastItems[0]?.title || 'Produkt'}${extraCount})`;
+                if (error || !orders || orders.length === 0) {
+                    list.innerHTML = '<p class="text-xs text-gray-500">Brak zamówień.</p>';
+                    select.innerHTML = '<option value="" disabled selected>Brak zakupionych produktów do oceny</option>';
+                    document.getElementById('last-order-info').innerText = 'Brak ostatnich zamówień';
+                    return;
+                }
 
-            const purchasedProductsMap = new Map();
+                const lastOrder = orders[0];
+                let lastItems = [];
+                try {
+                    lastItems = typeof lastOrder.items === 'string' ? JSON.parse(lastOrder.items) : (lastOrder.items || []);
+                } catch(e) { lastItems = []; }
 
-            list.innerHTML = orders.map(o => {
-                const items = typeof o.items === 'string' ? JSON.parse(o.items) : o.items;
-                items.forEach(item => {
-                    const id = item.id || item.product_id;
-                    if (id && !purchasedProductsMap.has(id)) {
-                        purchasedProductsMap.set(id, item.title);
-                    }
+                const extraCount = lastItems.length > 1 ? ` i ${lastItems.length - 1} więcej` : '';
+                document.getElementById('last-order-info').innerText = `Ostatnie zamówienie: #${lastOrder.order_number || lastOrder.id} (${lastItems[0]?.title || 'Produkt'}${extraCount})`;
+
+                const purchasedProductsMap = new Map();
+
+                list.innerHTML = orders.map(o => {
+                    let items = [];
+                    try {
+                        items = typeof o.items === 'string' ? JSON.parse(o.items) : (o.items || []);
+                    } catch(e) { items = []; }
+
+                    items.forEach(item => {
+                        const id = item.id || item.product_id;
+                        if (id && !purchasedProductsMap.has(id)) {
+                            purchasedProductsMap.set(id, item.title || 'Produkt');
+                        }
+                    });
+
+                    return `
+                        <div class="p-4 border rounded-custom flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                            <div>
+                                <span class="font-bold text-sm">#${o.order_number || o.id}</span>
+                                <span class="text-xs text-gray-400 ml-2">${new Date(o.created_at).toLocaleDateString('pl-PL')}</span>
+                                <p class="text-xs text-gray-600 mt-1">${items.map(i => `${i.title \vert{}\vert{} 'Produkt'} (x${i.quantity || 1})`).join(', ')}</p>
+                            </div>
+                            <div class="text-right">
+                                <span class="font-bold text-brandViolet">${parseFloat(o.total_amount || 0).toFixed(2)} PLN</span>
+                                <span class="block text-[10px] uppercase font-bold text-green-600">${o.status || 'opłacone'}</span>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+                select.innerHTML = '<option value="" disabled selected>Wybierz zakupiony produkt...</option>';
+                purchasedProductsMap.forEach((title, id) => {
+                    select.innerHTML += `<option value="${id}">${title}</option>`;
                 });
 
-                return `
-                    <div class="p-4 border rounded-custom flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-                        <div>
-                            <span class="font-bold text-sm">#${o.order_number}</span>
-                            <span class="text-xs text-gray-400 ml-2">${new Date(o.created_at).toLocaleDateString('pl-PL')}</span>
-                            <p class="text-xs text-gray-600 mt-1">${items.map(i => `${i.title} (x${i.quantity || 1})`).join(', ')}</p>
-                        </div>
-                        <div class="text-right">
-                            <span class="font-bold text-brandViolet">${parseFloat(o.total_amount).toFixed(2)} PLN</span>
-                            <span class="block text-[10px] uppercase font-bold text-green-600">${o.status}</span>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-
-            select.innerHTML = '<option value="" disabled selected>Wybierz zakupiony produkt...</option>';
-            purchasedProductsMap.forEach((title, id) => {
-                select.innerHTML += `<option value="${id}">${title}</option>`;
-            });
+            } catch (err) {
+                console.error("Błąd ładowania zamówień:", err);
+                list.innerHTML = '<p class="text-xs text-red-500">Błąd podczas ładowania zamówień.</p>';
+            }
         }
 
         async function loadAccesses() {
             const list = document.getElementById('accesses-list');
-            
-            const { data: orders } = await supabase
-                .from('orders')
-                .select('items')
-                .eq('user_id', currentUser.id)
-                .eq('status', 'paid');
+            try {
+                const { data: orders } = await supabase
+                    .from('orders')
+                    .select('items')
+                    .eq('user_id', currentUser.id);
 
-            if (!orders || orders.length === 0) {
-                list.innerHTML = '<p class="text-xs text-gray-500">Brak opłaconych zamówień i plików do pobrania.</p>';
-                return;
-            }
-
-            const productIds = new Set();
-            orders.forEach(o => {
-                const items = typeof o.items === 'string' ? JSON.parse(o.items) : o.items;
-                items.forEach(i => {
-                    const pId = i.id || i.product_id;
-                    if (pId) productIds.add(pId);
-                });
-            });
-
-            if (productIds.size === 0) {
-                list.innerHTML = '<p class="text-xs text-gray-500">Brak przypisanych produktów.</p>';
-                return;
-            }
-
-            const { data: products } = await supabase
-                .from('products')
-                .select('id, title, download_files')
-                .in('id', Array.from(productIds));
-
-            let html = '';
-            let totalFilesCount = 0;
-
-            (products || []).forEach(p => {
-                const files = typeof p.download_files === 'string' ? JSON.parse(p.download_files) : (p.download_files || []);
-                if (files.length > 0) {
-                    totalFilesCount += files.length;
-                    html += `
-                        <div class="p-4 border rounded-custom bg-white shadow-sm space-y-3">
-                            <h3 class="font-bold text-sm text-gray-900 border-b pb-2 flex items-center justify-between">
-                                <span>${p.title}</span>
-                                <span class="text-[10px] bg-purple-100 text-purple-800 px-2 py-0.5 rounded uppercase font-bold">${files.length} plik(i)</span>
-                            </h3>
-                            <div class="space-y-2">
-                                ${files.map(f => `
-                                    <div class="flex items-center justify-between p-2.5 bg-purple-50/50 border border-purple-100 rounded-custom">
-                                        <div class="flex items-center space-x-2">
-                                            <svg class="w-4 h-4 text-brandViolet" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-                                            <span class="text-xs font-semibold text-gray-800">${f.name || 'Plik cyfrowy'}</span>
-                                        </div>
-                                        <a href="${f.url}" download="${f.name || 'plik'}" target="_blank" class="px-3 py-1 bg-brandViolet text-white text-[11px] font-bold rounded-custom hover:bg-purple-800 transition flex items-center gap-1">
-                                            Pobierz
-                                        </a>
-                                    </div>
-                                `).join('')}
-                            </div>
-                        </div>
-                    `;
+                if (!orders || orders.length === 0) {
+                    list.innerHTML = '<p class="text-xs text-gray-500">Brak opłaconych zamówień i plików do pobrania.</p>';
+                    return;
                 }
-            });
 
-            list.innerHTML = totalFilesCount > 0 ? html : '<p class="text-xs text-gray-500">Zakupione produkty nie posiadają podpiętych plików do pobrania.</p>';
+                const productIds = new Set();
+                orders.forEach(o => {
+                    let items = [];
+                    try { items = typeof o.items === 'string' ? JSON.parse(o.items) : (o.items || []); } catch(e){}
+                    items.forEach(i => {
+                        const pId = i.id || i.product_id;
+                        if (pId) productIds.add(pId);
+                    });
+                });
+
+                if (productIds.size === 0) {
+                    list.innerHTML = '<p class="text-xs text-gray-500">Brak przypisanych produktów.</p>';
+                    return;
+                }
+
+                const { data: products } = await supabase
+                    .from('products')
+                    .select('id, title, download_files')
+                    .in('id', Array.from(productIds));
+
+                let html = '';
+                let totalFilesCount = 0;
+
+                (products || []).forEach(p => {
+                    let files = [];
+                    try { files = typeof p.download_files === 'string' ? JSON.parse(p.download_files) : (p.download_files || []); } catch(e){}
+                    
+                    if (files && files.length > 0) {
+                        totalFilesCount += files.length;
+                        html += `
+                            <div class="p-4 border rounded-custom bg-white shadow-sm space-y-3">
+                                <h3 class="font-bold text-sm text-gray-900 border-b pb-2 flex items-center justify-between">
+                                    <span>${p.title}</span>
+                                    <span class="text-[10px] bg-purple-100 text-purple-800 px-2 py-0.5 rounded uppercase font-bold">${files.length} plik(i)</span>
+                                </h3>
+                                <div class="space-y-2">
+                                    ${files.map(f => `
+                                        <div class="flex items-center justify-between p-2.5 bg-purple-50/50 border border-purple-100 rounded-custom">
+                                            <div class="flex items-center space-x-2">
+                                                <svg class="w-4 h-4 text-brandViolet" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                                                <span class="text-xs font-semibold text-gray-800">${f.name || 'Plik cyfrowy'}</span>
+                                            </div>
+                                            <a href="${f.url}" download="${f.name || 'plik'}" target="_blank" class="px-3 py-1 bg-brandViolet text-white text-[11px] font-bold rounded-custom hover:bg-purple-800 transition flex items-center gap-1">
+                                                Pobierz
+                                            </a>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        `;
+                    }
+                });
+
+                list.innerHTML = totalFilesCount > 0 ? html : '<p class="text-xs text-gray-500">Zakupione produkty nie posiadają podpiętych plików do pobrania.</p>';
+            } catch (err) {
+                console.error("Błąd dostępow:", err);
+                list.innerHTML = '<p class="text-xs text-red-500">Błąd podczas pobierania plików.</p>';
+            }
         }
 
         async function loadReviews() {
-            const { data: reviews } = await supabase.from('reviews').select('*').eq('user_id', currentUser.id).order('created_at', { ascending: false });
             const list = document.getElementById('reviews-list');
+            try {
+                const { data: reviews } = await supabase.from('reviews').select('*').eq('user_id', currentUser.id).order('created_at', { ascending: false });
 
-            if (!reviews || reviews.length === 0) {
-                list.innerHTML = '<p class="text-xs text-gray-500">Brak dodanych opinii.</p>';
-                return;
-            }
+                if (!reviews || reviews.length === 0) {
+                    list.innerHTML = '<p class="text-xs text-gray-500">Brak dodanych opinii.</p>';
+                    return;
+                }
 
-            list.innerHTML = reviews.map(r => `
-                <div class="p-3 border rounded-custom text-xs space-y-1">
-                    <div class="flex justify-between font-bold">
-                        <span>${r.product_title ? r.product_title + ' - ' : ''}Ocena: ${'★'.repeat(r.rating)}</span>
-                        <span class="text-amber-600 uppercase">${r.status === 'pending' ? 'W trakcie zatwierdzania' : 'Zatwierdzona'}</span>
+                list.innerHTML = reviews.map(r => `
+                    <div class="p-3 border rounded-custom text-xs space-y-1">
+                        <div class="flex justify-between font-bold">
+                            <span>${r.product_title ? r.product_title + ' - ' : ''}Ocena: ${'★'.repeat(r.rating || 5)}</span>
+                            <span class="text-amber-600 uppercase">${r.status === 'pending' ? 'W trakcie zatwierdzania' : 'Zatwierdzona'}</span>
+                        </div>
+                        <p class="text-gray-600">${r.comment || ''}</p>
+                        <span class="block text-[10px] text-gray-400">${new Date(r.created_at).toLocaleDateString('pl-PL')}</span>
                     </div>
-                    <p class="text-gray-600">${r.comment}</p>
-                    <span class="block text-[10px] text-gray-400">${new Date(r.created_at).toLocaleDateString('pl-PL')}</span>
-                </div>
-            `).join('');
+                `).join('');
+            } catch (err) {
+                console.error("Błąd opinii:", err);
+            }
         }
 
-        async function submitReview(e) {
+        window.submitReview = async function(e) {
             e.preventDefault();
             const submitBtn = document.getElementById('review-submit-btn');
             const select = document.getElementById('review-product-select');
@@ -319,21 +373,20 @@
             submitBtn.innerText = 'Dodaj opinię';
 
             if (!error) {
-                showToast('Opinia została przesłana do zatwierdzenia.');
+                showToast('Opinia została przesłana do zatwierdzania.');
                 document.getElementById('review-comment').value = '';
                 select.selectedIndex = 0;
                 loadReviews();
             } else {
                 showToast('Błąd podczas dodawania opinii: ' + error.message);
             }
-        }
+        };
 
-        async function logout() {
-            await supabase.auth.signOut();
-            window.location.href = "https://6wdzienniku.vercel.app";
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initAccount);
+        } else {
+            initAccount();
         }
-
-        document.addEventListener('DOMContentLoaded', initAccount);
     </script>
 </body>
 </html>
