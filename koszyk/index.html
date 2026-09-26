@@ -79,7 +79,7 @@
                         <div class="bg-purple-50 p-4 rounded-custom border border-purple-100 text-xs text-purple-900 mb-4">
                             Zaloguj się, aby sfinalizować zamówienie i otrzymać dostęp do materiałów.
                         </div>
-                        <a href="/api-login/?login" class="block w-full py-3 bg-brandViolet text-white text-center font-bold rounded-custom shadow hover:bg-purple-800 transition">Zaloguj się / Zarejestruj</a>
+                        <a href="/api-login/" class="block w-full py-3 bg-brandViolet text-white text-center font-bold rounded-custom shadow hover:bg-purple-800 transition">Zaloguj się / Zarejestruj</a>
                     </div>
 
                     <div id="checkout-section" class="hidden">
@@ -110,7 +110,7 @@
         const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         const stripe = Stripe(STRIPE_PK);
 
-        let elements;
+        let elements = null;
         let appliedCouponCode = null;
         let discountPercent = 0;
 
@@ -121,16 +121,29 @@
             setTimeout(() => toast.classList.add('translate-x-full'), 3000);
         }
 
+        function getCartItems() {
+            try {
+                return JSON.parse(localStorage.getItem('cart') || '[]');
+            } catch (e) {
+                console.error("Błąd odczytu koszyka:", e);
+                return [];
+            }
+        }
+
         function calculateCartSubtotal() {
-            const cart = JSON.parse(localStorage.getItem('cart') || '[]');
-            return cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+            const cart = getCartItems();
+            return cart.reduce((sum, item) => {
+                const price = parseFloat(item.price) || 0;
+                const qty = parseInt(item.quantity) || 1;
+                return sum + (price * qty);
+            }, 0);
         }
 
         function renderCart() {
-            const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+            const cart = getCartItems();
             const container = document.getElementById('cart-items-container');
 
-            if (cart.length === 0) {
+            if (!cart || cart.length === 0) {
                 container.innerHTML = '<p class="text-gray-500 font-sans">Twój koszyk jest pusty.</p>';
                 document.getElementById('subtotal-val').innerText = '0.00 PLN';
                 document.getElementById('discount-row').classList.add('hidden');
@@ -142,21 +155,28 @@
             const discountAmount = (subtotal * discountPercent) / 100;
             const total = Math.max(0, subtotal - discountAmount);
 
-            container.innerHTML = cart.map((item, index) => `
-                <div class="bg-white p-4 rounded-custom border border-gray-100 shadow-sm flex items-center justify-between gap-4">
-                    <img src="${item.image}" alt="${item.title}" class="w-16 h-16 object-cover rounded-custom">
-                    <div class="flex-grow">
-                        <h3 class="font-bold text-sm text-gray-900">${item.title}</h3>
-                        <p class="text-xs text-brandViolet font-semibold">${parseFloat(item.price).toFixed(2)} PLN</p>
+            container.innerHTML = cart.map((item, index) => {
+                const price = (parseFloat(item.price) || 0).toFixed(2);
+                const image = item.image || 'https://files-6wdzienniku.vercel.app/content/6wd/logo_favicon_6.svg';
+                const title = item.title || item.name || 'Produkt bez nazwy';
+                const quantity = item.quantity || 1;
+
+                return `
+                    <div class="bg-white p-4 rounded-custom border border-gray-100 shadow-sm flex items-center justify-between gap-4">
+                        <img src="${image}" alt="${title}" class="w-16 h-16 object-cover rounded-custom">
+                        <div class="flex-grow">
+                            <h3 class="font-bold text-sm text-gray-900">${title}</h3>
+                            <p class="text-xs text-brandViolet font-semibold">${price} PLN</p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs text-gray-500">Ilość: ${quantity}</span>
+                            <button onclick="removeItem(${index})" class="p-1 text-gray-400 hover:text-red-500 transition" title="Usuń z koszyka">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                            </button>
+                        </div>
                     </div>
-                    <div class="flex items-center gap-2">
-                        <span class="text-xs text-gray-500">Ilość: ${item.quantity}</span>
-                        <button onclick="removeItem(${index})" class="p-1 text-gray-400 hover:text-red-500 transition">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                        </button>
-                    </div>
-                </div>
-            `).join('');
+                `;
+            }).join('');
 
             document.getElementById('subtotal-val').innerText = `${subtotal.toFixed(2)} PLN`;
             
@@ -171,7 +191,7 @@
         }
 
         function removeItem(idx) {
-            let cart = JSON.parse(localStorage.getItem('cart') || '[]');
+            let cart = getCartItems();
             cart.splice(idx, 1);
             localStorage.setItem('cart', JSON.stringify(cart));
             renderCart();
@@ -207,14 +227,17 @@
 
         async function initCheckout() {
             const { data: { session } } = await supabase.auth.getSession();
+            const cart = getCartItems();
             
             if (session) {
                 document.getElementById('auth-section').classList.add('hidden');
                 document.getElementById('checkout-section').classList.remove('hidden');
                 document.getElementById('user-info-box').innerText = `Zalogowano jako: ${session.user.email}`;
 
-                const cart = JSON.parse(localStorage.getItem('cart') || '[]');
-                if (cart.length === 0) return;
+                if (!cart || cart.length === 0) {
+                    document.getElementById('checkout-section').classList.add('hidden');
+                    return;
+                }
 
                 try {
                     const response = await fetch('/api/create-payment-intent', {
@@ -245,6 +268,9 @@
                     msg.innerText = err.message;
                     msg.classList.remove('hidden');
                 }
+            } else {
+                document.getElementById('auth-section').classList.remove('hidden');
+                document.getElementById('checkout-section').classList.add('hidden');
             }
         }
 
