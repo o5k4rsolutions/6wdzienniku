@@ -56,7 +56,7 @@
                     <h2 class="text-xl font-condensed border-b border-gray-100 pb-3">Podsumowanie</h2>
 
                     <div class="flex gap-2">
-                        <input type="text" id="coupon-code" placeholder="Kod rabatowy" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-custom focus:outline-none focus:border-brandViolet">
+                        <input type="text" id="coupon-code" placeholder="Kod rabatowy" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-custom focus:outline-none focus:border-brandViolet uppercase">
                         <button onclick="applyCoupon()" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 text-xs font-semibold rounded-custom transition">Zastosuj</button>
                     </div>
 
@@ -86,7 +86,7 @@
                         <div id="user-info-box" class="text-xs text-gray-500 mb-4"></div>
                         <form id="payment-form">
                             <div id="payment-element" class="mb-4"></div>
-                            <button id="submit-btn" class="w-full py-3.5 bg-gradient-to-r from-brandViolet to-brandPink text-white font-bold rounded-custom shadow-md hover:opacity-95 transition">Zapłać teraz</button>
+                            <button id="submit-btn" type="submit" class="w-full py-3.5 bg-gradient-to-r from-brandViolet to-brandPink text-white font-bold rounded-custom shadow-md hover:opacity-95 transition disabled:opacity-50">Zapłać teraz</button>
                             <div id="payment-message" class="text-xs text-red-500 mt-2 hidden"></div>
                         </form>
                     </div>
@@ -103,7 +103,7 @@
     </footer>
 
     <script>
-     const SUPABASE_URL = "https://fxksikgdberwgttvglko.supabase.co";
+        const SUPABASE_URL = "https://fxksikgdberwgttvglko.supabase.co";
         const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ4a3Npa2dkYmVyd2d0dHZnbGtvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA0MzU3NzYsImV4cCI6MjEwNjAxMTc3Nn0.sKf3vvVbaae5-mdg5zwqrgUl6AkXjENanwhDWbH_PXw";
         const STRIPE_PK = "pk_live_51U9Lv5Q2ih8UDd9IQJ2lVSHCayHb6qrJUN1y8i3za2f6GZNA0sv4H5tBsFcdbyZAOHL3nvJvQCCA76XYtvBow0kL00yLvmCiTI";
         
@@ -112,12 +112,18 @@
 
         let elements;
         let appliedCouponCode = null;
+        let discountPercent = 0;
 
         function showToast(msg) {
             const toast = document.getElementById('toast');
             document.getElementById('toast-message').innerText = msg;
             toast.classList.remove('translate-x-full');
             setTimeout(() => toast.classList.add('translate-x-full'), 3000);
+        }
+
+        function calculateCartSubtotal() {
+            const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+            return cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
         }
 
         function renderCart() {
@@ -127,32 +133,41 @@
             if (cart.length === 0) {
                 container.innerHTML = '<p class="text-gray-500 font-sans">Twój koszyk jest pusty.</p>';
                 document.getElementById('subtotal-val').innerText = '0.00 PLN';
+                document.getElementById('discount-row').classList.add('hidden');
                 document.getElementById('total-val').innerText = '0.00 PLN';
                 return;
             }
 
-            let subtotal = 0;
-            container.innerHTML = cart.map((item, index) => {
-                subtotal += item.price * item.quantity;
-                return `
-                    <div class="bg-white p-4 rounded-custom border border-gray-100 shadow-sm flex items-center justify-between gap-4">
-                        <img src="${item.image}" alt="${item.title}" class="w-16 h-16 object-cover rounded-custom">
-                        <div class="flex-grow">
-                            <h3 class="font-bold text-sm text-gray-900">${item.title}</h3>
-                            <p class="text-xs text-brandViolet font-semibold">${parseFloat(item.price).toFixed(2)} PLN</p>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <span class="text-xs text-gray-500">Ilość: ${item.quantity}</span>
-                            <button onclick="removeItem(${index})" class="p-1 text-gray-400 hover:text-red-500 transition">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                            </button>
-                        </div>
+            const subtotal = calculateCartSubtotal();
+            const discountAmount = (subtotal * discountPercent) / 100;
+            const total = Math.max(0, subtotal - discountAmount);
+
+            container.innerHTML = cart.map((item, index) => `
+                <div class="bg-white p-4 rounded-custom border border-gray-100 shadow-sm flex items-center justify-between gap-4">
+                    <img src="${item.image}" alt="${item.title}" class="w-16 h-16 object-cover rounded-custom">
+                    <div class="flex-grow">
+                        <h3 class="font-bold text-sm text-gray-900">${item.title}</h3>
+                        <p class="text-xs text-brandViolet font-semibold">${parseFloat(item.price).toFixed(2)} PLN</p>
                     </div>
-                `;
-            }).join('');
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs text-gray-500">Ilość: ${item.quantity}</span>
+                        <button onclick="removeItem(${index})" class="p-1 text-gray-400 hover:text-red-500 transition">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                        </button>
+                    </div>
+                </div>
+            `).join('');
 
             document.getElementById('subtotal-val').innerText = `${subtotal.toFixed(2)} PLN`;
-            document.getElementById('total-val').innerText = `${subtotal.toFixed(2)} PLN`;
+            
+            if (discountPercent > 0) {
+                document.getElementById('discount-row').classList.remove('hidden');
+                document.getElementById('discount-val').innerText = `-${discountAmount.toFixed(2)} PLN`;
+            } else {
+                document.getElementById('discount-row').classList.add('hidden');
+            }
+
+            document.getElementById('total-val').innerText = `${total.toFixed(2)} PLN`;
         }
 
         function removeItem(idx) {
@@ -160,6 +175,34 @@
             cart.splice(idx, 1);
             localStorage.setItem('cart', JSON.stringify(cart));
             renderCart();
+            initCheckout();
+        }
+
+        async function applyCoupon() {
+            const codeInput = document.getElementById('coupon-code');
+            const code = codeInput.value.trim().toUpperCase();
+
+            if (!code) {
+                showToast('Wpisz kod rabatowy.');
+                return;
+            }
+
+            const { data: coupon, error } = await supabase
+                .from('coupons')
+                .select('*')
+                .eq('code', code)
+                .single();
+
+            if (error || !coupon) {
+                showToast('Niepoprawny kod rabatowy.');
+                return;
+            }
+
+            appliedCouponCode = coupon.code;
+            discountPercent = coupon.discount_percent || 0;
+            showToast(`Zastosowano kod! Rabat: ${discountPercent}%`);
+            renderCart();
+            initCheckout();
         }
 
         async function initCheckout() {
@@ -171,45 +214,70 @@
                 document.getElementById('user-info-box').innerText = `Zalogowano jako: ${session.user.email}`;
 
                 const cart = JSON.parse(localStorage.getItem('cart') || '[]');
-                if(cart.length === 0) return;
+                if (cart.length === 0) return;
 
-                const response = await fetch('/api/create-payment-intent', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        items: cart,
-                        userId: session.user.id,
-                        couponCode: appliedCouponCode
-                    })
-                });
+                try {
+                    const response = await fetch('/api/create-payment-intent', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            items: cart,
+                            userId: session.user.id,
+                            couponCode: appliedCouponCode
+                        })
+                    });
 
-                const { clientSecret } = await response.json();
+                    const data = await response.json();
+                    
+                    if (!response.ok || !data.clientSecret) {
+                        throw new Error(data.message || 'Błąd inicjalizacji płatności');
+                    }
 
-                elements = stripe.elements({ clientSecret });
-                const paymentElement = elements.create('payment');
-                paymentElement.mount('#payment-element');
+                    elements = stripe.elements({ clientSecret: data.clientSecret });
+                    const paymentElement = elements.create('payment');
+                    
+                    const paymentContainer = document.getElementById('payment-element');
+                    paymentContainer.innerHTML = ''; 
+                    paymentElement.mount('#payment-element');
+
+                } catch (err) {
+                    const msg = document.getElementById('payment-message');
+                    msg.innerText = err.message;
+                    msg.classList.remove('hidden');
+                }
             }
         }
-
-        document.getElementById('payment-form')?.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const { error } = await stripe.confirmPayment({
-                elements,
-                confirmParams: {
-                    return_url: window.location.origin + '/mojekonto?payment_success=true',
-                },
-            });
-
-            if (error) {
-                const msg = document.getElementById('payment-message');
-                msg.innerText = error.message;
-                msg.classList.remove('hidden');
-            }
-        });
 
         document.addEventListener('DOMContentLoaded', () => {
             renderCart();
             initCheckout();
+
+            const paymentForm = document.getElementById('payment-form');
+            if (paymentForm) {
+                paymentForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    if (!elements) return;
+
+                    const submitBtn = document.getElementById('submit-btn');
+                    submitBtn.disabled = true;
+                    submitBtn.innerText = 'Przetwarzanie...';
+
+                    const { error } = await stripe.confirmPayment({
+                        elements,
+                        confirmParams: {
+                            return_url: window.location.origin + '/mojekonto?payment_success=true',
+                        },
+                    });
+
+                    if (error) {
+                        const msg = document.getElementById('payment-message');
+                        msg.innerText = error.message;
+                        msg.classList.remove('hidden');
+                        submitBtn.disabled = false;
+                        submitBtn.innerText = 'Zapłać teraz';
+                    }
+                });
+            }
         });
     </script>
 </body>
