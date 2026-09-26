@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sklep - 6 w Dzienniku</title>
+    <link rel="icon" type="image/x-icon" href="https://6wdzienniku.vercel.app/6-content/logo_favicon_6.svg">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brandPurple: '#5B21B6',
+                        brandPink: '#EC4899',
+                        brandLight: '#FDF4FF',
+                    }
+                }
+            }
+        }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <script src="https://js.stripe.com/v3/"></script>
+    <style>
+        body { font-family: 'Poppins', sans-serif; }
+        .sweep-btn {
+            position: relative; overflow: hidden; z-index: 1; transition: transform 0.3s, box-shadow 0.3s;
+        }
+        .sweep-btn::before {
+            content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%;
+            background: linear-gradient(135deg, #5B21B6 0%, #EC4899 100%);
+            transition: transform 0.4s; z-index: -1;
+        }
+        .sweep-btn:hover::before { transform: translateX(100%); }
+        .sweep-btn:hover { transform: scale(1.05); box-shadow: 0 10px 25px -5px rgba(236, 72, 153, 0.4); }
+    </style>
+</head>
+<body class="bg-[#FAFAFC] text-slate-800 min-h-screen flex flex-col relative selection:bg-pink-200 selection:text-pink-900">
+
+    <header class="w-full bg-white/80 backdrop-blur-md sticky top-0 z-40 border-b border-purple-100">
+        <div class="max-w-6xl mx-auto px-6 h-24 flex items-center justify-between">
+            <a href="https://6wdzienniku.vercel.app" class="flex items-center group">
+                <img src="https://6wdzienniku.vercel.app/6-content/logo_6wdzienn_kolor.png" class="h-16 transition-transform group-hover:scale-105" alt="Logo">
+            </a>
+            
+            <nav class="flex items-center gap-4">
+                <button onclick="toggleCart()" class="p-2 text-[#5B21B6] hover:text-[#EC4899] transition-colors relative" title="Koszyk">
+                    <svg class="w-7 h-7" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                    </svg>
+                    <span id="cart-count" class="absolute top-0 right-0 bg-[#EC4899] text-white text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center border-2 border-white">0</span>
+                </button>
+                <button onclick="toggleAuthModal()" class="p-2 text-[#5B21B6] hover:text-[#EC4899] transition-colors" title="Moje Konto">
+                    <svg class="w-7 h-7" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                    </svg>
+                </button>
+            </nav>
+        </div>
+    </header>
+
+    <main class="flex-grow max-w-6xl mx-auto px-6 py-12 w-full">
+        <div class="mb-10 text-center sm:text-left">
+            <h1 class="text-3xl sm:text-4xl font-extrabold text-slate-900 mb-2">Nasze Produkty</h1>
+        </div>
+
+        <div id="product-list" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8">
+            
+            <div class="bg-white rounded-2xl border border-purple-100 p-5 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col group cursor-pointer" onclick="window.location.href='/produkty/1/pakiet-matematyka'">
+                <div class="w-full h-48 bg-slate-100 rounded-xl mb-4 overflow-hidden relative">
+                    <img src="https://via.placeholder.com/400x300?text=Zdjęcie+Produktu" alt="Pakiet Matematyka" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110">
+                    <span class="absolute top-3 left-3 bg-[#EC4899] text-white text-xs font-bold px-3 py-1 rounded-full shadow-md">-40%</span>
+                </div>
+                
+                <h2 class="text-lg font-bold text-slate-900 mb-1 leading-tight">Pakiet Testów Premium (Matematyka)</h2>
+                
+                <div class="mt-auto pt-4 border-t border-slate-100">
+                    <div class="flex items-end justify-between mb-1">
+                        <div>
+                            <p class="text-slate-400 line-through text-sm">49,00 PLN</p>
+                            <p class="text-2xl font-extrabold text-[#5B21B6]">29,00 PLN</p>
+                        </div>
+                        <button onclick="event.stopPropagation(); addToCart(1)" class="bg-slate-100 hover:bg-[#5B21B6] text-[#5B21B6] hover:text-white p-3 rounded-xl transition-colors">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"></path></svg>
+                        </button>
+                    </div>
+                    <p class="text-[11px] text-slate-400 mt-2">Najniższa cena z 30 dni przed obniżką: 29,00 PLN</p>
+                </div>
+            </div>
+
+
+        </div>
+    </main>
+
+    <div id="auth-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm hidden items-center justify-center z-50 p-4 opacity-0 transition-opacity duration-300">
+        <div class="bg-white p-8 rounded-3xl w-full max-w-md shadow-2xl relative transform scale-95 transition-transform duration-300" id="auth-modal-content">
+            <button onclick="toggleAuthModal()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-700">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+            
+            <div id="login-form">
+                <h2 class="text-2xl font-bold text-slate-900 mb-6">Zaloguj się</h2>
+                <input type="email" placeholder="Adres e-mail" class="w-full px-4 py-3 rounded-xl border border-slate-200 mb-4 focus:outline-none focus:border-[#5B21B6] focus:ring-1 focus:ring-[#5B21B6]">
+                <input type="password" placeholder="Hasło" class="w-full px-4 py-3 rounded-xl border border-slate-200 mb-2 focus:outline-none focus:border-[#5B21B6] focus:ring-1 focus:ring-[#5B21B6]">
+                <button class="text-sm text-[#5B21B6] hover:underline mb-6 block w-full text-right" onclick="switchAuthView('reset')">Zapomniałeś hasła?</button>
+                <button class="sweep-btn w-full bg-gradient-to-r from-[#5B21B6] to-[#EC4899] text-white font-bold py-3.5 rounded-xl shadow-md mb-4">Zaloguj się</button>
+                <p class="text-center text-sm text-slate-500">Nie masz konta? <button onclick="switchAuthView('register')" class="text-[#5B21B6] font-semibold hover:underline">Zarejestruj się</button></p>
+            </div>
+
+            <div id="register-form" class="hidden">
+                <h2 class="text-2xl font-bold text-slate-900 mb-6">Rejestracja</h2>
+                <input type="text" placeholder="Imię i Nazwisko" class="w-full px-4 py-3 rounded-xl border border-slate-200 mb-4 focus:outline-none focus:border-[#5B21B6]">
+                <input type="email" placeholder="Adres e-mail" class="w-full px-4 py-3 rounded-xl border border-slate-200 mb-4 focus:outline-none focus:border-[#5B21B6]">
+                <input type="password" placeholder="Hasło" class="w-full px-4 py-3 rounded-xl border border-slate-200 mb-6 focus:outline-none focus:border-[#5B21B6]">
+                <button class="sweep-btn w-full bg-gradient-to-r from-[#5B21B6] to-[#EC4899] text-white font-bold py-3.5 rounded-xl shadow-md mb-4">Załóż konto</button>
+                <p class="text-center text-sm text-slate-500">Masz już konto? <button onclick="switchAuthView('login')" class="text-[#5B21B6] font-semibold hover:underline">Zaloguj się</button></p>
+            </div>
+
+            <div id="reset-form" class="hidden">
+                <h2 class="text-2xl font-bold text-slate-900 mb-2">Reset hasła</h2>
+                <p class="text-sm text-slate-500 mb-6">Podaj swój e-mail. Wyślemy Ci link do zmiany hasła.</p>
+                <input type="email" placeholder="Adres e-mail" class="w-full px-4 py-3 rounded-xl border border-slate-200 mb-6 focus:outline-none focus:border-[#5B21B6]">
+                <button class="sweep-btn w-full bg-gradient-to-r from-[#5B21B6] to-[#EC4899] text-white font-bold py-3.5 rounded-xl shadow-md mb-4">Wyślij link</button>
+                <p class="text-center text-sm text-slate-500"><button onclick="switchAuthView('login')" class="text-[#5B21B6] font-semibold hover:underline">Wróć do logowania</button></p>
+            </div>
+        </div>
+    </div>
+
+    <div id="cart-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm hidden items-center justify-center z-50 p-4 opacity-0 transition-opacity duration-300">
+        <div class="bg-white p-6 sm:p-8 rounded-3xl w-full max-w-lg shadow-2xl relative max-h-[90vh] overflow-y-auto transform scale-95 transition-transform duration-300" id="cart-modal-content">
+            <button onclick="toggleCart()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-700">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+            
+            <h2 class="text-2xl font-bold text-slate-900 mb-6">Twój Koszyk</h2>
+            
+            <div id="cart-items" class="mb-6 space-y-4">
+                <div class="flex justify-between items-center border-b border-slate-100 pb-4">
+                    <div>
+                        <p class="font-semibold text-slate-800 text-sm">Pakiet Testów Premium</p>
+                        <p class="text-[#5B21B6] font-bold">29,00 PLN</p>
+                    </div>
+                    <button class="text-slate-400 hover:text-red-500"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button>
+                </div>
+            </div>
+
+            <div class="flex gap-2 mb-6">
+                <input type="text" placeholder="Kod rabatowy" class="flex-grow px-4 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-[#5B21B6]">
+                <button class="bg-slate-100 text-slate-700 font-semibold px-4 py-2 rounded-xl text-sm hover:bg-slate-200">Dodaj</button>
+            </div>
+
+            <div class="flex justify-between items-center mb-6 pt-4 border-t border-slate-100">
+                <span class="text-slate-500 font-medium">Suma do zapłaty:</span>
+                <span class="text-2xl font-extrabold text-[#5B21B6]">29,00 PLN</span>
+            </div>
+
+            <div id="payment-element" class="mb-6 min-h-[150px] bg-slate-50 p-4 rounded-xl border border-slate-200 flex items-center justify-center text-sm text-slate-500">
+                Formularz płatności załaduje się po utworzeniu zamówienia.
+            </div>
+
+            <button id="submit-payment" class="sweep-btn w-full bg-gradient-to-r from-[#5B21B6] to-[#EC4899] text-white font-bold py-4 rounded-xl shadow-md">
+                Zapłać i Zamów
+            </button>
+            <p class="text-[10px] text-center text-slate-400 mt-4">Klikając przycisk akceptujesz regulamin i zgadzasz się na natychmiastowe dostarczenie treści cyfrowych.</p>
+        </div>
+    </div>
+
+    <script>
+        const stripe = Stripe('pk_live_51U9Lv5Q2ih8UDd9IQJ2lVSHCayHb6qrJUN1y8i3za2f6GZNA0sv4H5tBsFcdbyZAOHL3nvJvQCCA76XYtvBow0kL00yLvmCiTI'); 
+        
+        let elements; 
+
+        
+        function toggleCart() {
+            const modal = document.getElementById('cart-modal');
+            const content = document.getElementById('cart-modal-content');
+            if (modal.classList.contains('hidden')) {
+                modal.classList.remove('hidden');
+                modal.style.display = 'flex';
+                setTimeout(() => {
+                    modal.classList.remove('opacity-0');
+                    content.classList.remove('scale-95');
+                }, 10);
+                
+            } else {
+                modal.classList.add('opacity-0');
+                content.classList.add('scale-95');
+                setTimeout(() => {
+                    modal.classList.add('hidden');
+                    modal.style.display = 'none';
+                }, 300);
+            }
+        }
+
+        async function mountStripeElement(clientSecret) {
+            const appearance = {
+                theme: 'stripe',
+                variables: {
+                    colorPrimary: '#5B21B6',
+                    colorBackground: '#ffffff',
+                    colorText: '#1e293b',
+                    colorDanger: '#ef4444',
+                    fontFamily: 'Poppins, system-ui, sans-serif',
+                    borderRadius: '12px',
+                }
+            };
+            
+            elements = stripe.elements({ clientSecret, appearance });
+            
+            const paymentElement = elements.create('payment', { layout: 'tabs' });
+            
+            document.getElementById('payment-element').innerHTML = '';
+            paymentElement.mount('#payment-element');
+        }
+
+        function toggleAuthModal() {
+            const modal = document.getElementById('auth-modal');
+            const content = document.getElementById('auth-modal-content');
+            if (modal.classList.contains('hidden')) {
+                modal.classList.remove('hidden');
+                modal.style.display = 'flex';
+                setTimeout(() => {
+                    modal.classList.remove('opacity-0');
+                    content.classList.remove('scale-95');
+                }, 10);
+            } else {
+                modal.classList.add('opacity-0');
+                content.classList.add('scale-95');
+                setTimeout(() => {
+                    modal.classList.add('hidden');
+                    modal.style.display = 'none';
+                }, 300);
+            }
+        }
+
+        function switchAuthView(view) {
+            document.getElementById('login-form').classList.add('hidden');
+            document.getElementById('register-form').classList.add('hidden');
+            document.getElementById('reset-form').classList.add('hidden');
+            document.getElementById(`${view}-form`).classList.remove('hidden');
+        }
+
+        function addToCart(productId) {
+            alert('Produkt dodany do koszyka!');
+            const count = document.getElementById('cart-count');
+            count.innerText = parseInt(count.innerText) + 1;
+        }
+        
+        window.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('reset') === 'true') {
+                toggleAuthModal();
+            }
+        });
+    </script>
+</body>
+</html>
