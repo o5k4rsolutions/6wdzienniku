@@ -309,7 +309,15 @@
                         throw new Error(data.message || `Błąd serwera (${response.status}) - endpoint /api/create-payment-intent jest niedostępny.`);
                     }
 
-                    elements = stripe.elements({ clientSecret: data.clientSecret });
+                    elements = stripe.elements({ 
+                        clientSecret: data.clientSecret,
+                        defaultValues: {
+                            billingDetails: {
+                                email: session.user.email
+                            }
+                        }
+                    });
+
                     const paymentElement = elements.create('payment');
                     
                     const paymentContainer = document.getElementById('payment-element');
