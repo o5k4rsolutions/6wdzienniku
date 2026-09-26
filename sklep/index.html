@@ -39,9 +39,9 @@
         .btn-sweep:hover svg { stroke: #ffffff !important; fill: #ffffff !important; }
     </style>
 </head>
-<body class="min-h-screen flex flex-col justify-between">
+<body class="min-h-screen flex flex-col justify-between overflow-x-hidden">
 
-    <div id="toast" class="fixed top-5 right-5 z-50 transform translate-x-full transition-transform duration-300 ease-in-out bg-gray-900 text-white px-5 py-3 rounded-custom shadow-xl border border-purple-500/30 flex items-center gap-3">
+    <div id="toast" class="fixed top-5 right-5 z-50 opacity-0 pointer-events-none transition-opacity duration-300 bg-gray-900 text-white px-5 py-3 rounded-custom shadow-xl border border-purple-500/30 flex items-center gap-3">
         <span id="toast-message" class="text-sm font-medium">Powiadomienie</span>
     </div>
 
@@ -70,7 +70,7 @@
 
     <main class="flex-grow max-w-7xl mx-auto px-4 sm:px-6 py-10 w-full">
         <div class="text-center mb-10">
-            <h1 class="text-4xl sm:text-5xl font-condensed text-gray-900 tracking-tight">Sklep z <span class="text-gradient">materiałamii</span></h1>
+            <h1 class="text-4xl sm:text-5xl font-condensed text-gray-900 tracking-tight">Sklep</h1>
             <p class="text-gray-600 text-sm sm:text-base mt-2 max-w-xl mx-auto">Wybierz testy, kartkówki i sprawdziany, które pomogą Ci osiągnąć najlepsze wyniki.</p>
         </div>
 
@@ -96,9 +96,14 @@
 
         function showToast(message) {
             const toast = document.getElementById('toast');
+            if (!toast) return;
             document.getElementById('toast-message').innerText = message;
-            toast.classList.remove('translate-x-full');
-            setTimeout(() => toast.classList.add('translate-x-full'), 3000);
+            toast.classList.remove('opacity-0', 'pointer-events-none');
+            toast.classList.add('opacity-100');
+            setTimeout(() => {
+                toast.classList.remove('opacity-100');
+                toast.classList.add('opacity-0', 'pointer-events-none');
+            }, 3000);
         }
 
         function updateCartBadge() {
