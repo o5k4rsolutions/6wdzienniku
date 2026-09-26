@@ -8,7 +8,6 @@ const supabase = createClient(
 );
 
 module.exports = async (req, res) => {
-  // Obsługa nagłówków CORS (jeśli frontend i backend są pod innymi adresami)
   res.setHeader('Access-Control-Allow-Credentials', true);
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
@@ -18,8 +17,7 @@ module.exports = async (req, res) => {
   );
 
   if (req.method === 'OPTIONS') {
-    res.status(200).end();
-    return;
+    return res.status(200).end();
   }
 
   if (req.method !== 'POST') {
@@ -37,6 +35,18 @@ module.exports = async (req, res) => {
       return res.status(401).json({ message: 'Brak autoryzacji użytkownika' });
     }
 
+    // 1. Pobranie e-maila użytkownika z tabeli profiles
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('email')
+      .eq('id', userId)
+      .single();
+
+    if (profileError || !profile) {
+      throw new Error('Nie udało się pobrać danych profilu użytkownika.');
+    }
+
+    // 2. Obliczenie wartości produktów (subtotal)
     let subtotal = 0;
     for (const item of items) {
       const { data: product } = await supabase
@@ -53,6 +63,7 @@ module.exports = async (req, res) => {
     let discountPercent = 0;
     let appliedCouponId = null;
 
+    // 3. Weryfikacja i obsługa kuponu rabatowego
     if (couponCode) {
       const { data: coupon } = await supabase
         .from('coupons')
@@ -70,14 +81,16 @@ module.exports = async (req, res) => {
     const finalAmount = Math.max(0, subtotal - discountAmount);
     const amountInCents = Math.round(finalAmount * 100);
 
+    // 4. Utworzenie zamówienia w bazie z pełnymi danymi kuponu i e-maila
     const { data: order, error: orderError } = await supabase
       .from('orders')
       .insert({
         user_id: userId,
-        total_amount: finalAmount,
+        user_email: profile.email,
         subtotal: subtotal,
         discount_amount: discountAmount,
         coupon_id: appliedCouponId,
+        total_amount: finalAmount,
         status: 'pending',
         items: JSON.stringify(items)
       })
@@ -88,6 +101,7 @@ module.exports = async (req, res) => {
       throw new Error(`Błąd zapisu zamówienia: ${orderError.message}`);
     }
 
+    // 5. Utworzenie PaymentIntent w Stripe
     const paymentIntent = await stripe.paymentIntents.create({
       amount: amountInCents,
       currency: 'pln',
