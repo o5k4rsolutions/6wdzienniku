@@ -117,6 +117,7 @@
     <script>
         const SUPABASE_URL = "https://fxksikgdberwgttvglko.supabase.co";
         const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ4a3Npa2dkYmVyd2d0dHZnbGtvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA0MzU3NzYsImV4cCI6MjEwNjAxMTc3Nn0.sKf3vvVbaae5-mdg5zwqrgUl6AkXjENanwhDWbH_PXw";
+        
         const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         let currentUser = null;
 
@@ -125,7 +126,7 @@
             if (!toast) return;
             document.getElementById('toast-message').innerText = msg;
             toast.classList.remove('translate-x-full');
-            setTimeout(() => toast.classList.add('translate-x-full'), 3000);
+            setTimeout(() => toast.classList.add('translate-x-full'), 4000);
         }
 
         window.switchTab = function(tabName) {
@@ -155,10 +156,17 @@
 
         async function initAccount() {
             try {
+                const urlParams = new URLSearchParams(window.location.search);
+                if (urlParams.get('payment_success') === 'true') {
+                    localStorage.removeItem('cart');
+                    showToast('Płatność zakończona pomyślnie! Twój koszyk został opróżniony.');
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                }
+
                 const { data: { session }, error: sessionError } = await supabase.auth.getSession();
                 
                 if (sessionError || !session) {
-                    window.location.href = '/api-login/?login';
+                    window.location.href = '/api-login/';
                     return;
                 }
                 
@@ -185,7 +193,11 @@
             const select = document.getElementById('review-product-select');
 
             try {
-                const { data: orders, error } = await supabase.from('orders').select('*').eq('user_id', currentUser.id).order('created_at', { ascending: false });
+                const { data: orders, error } = await supabase
+                    .from('orders')
+                    .select('*')
+                    .eq('user_id', currentUser.id)
+                    .order('created_at', { ascending: false });
 
                 if (error || !orders || orders.length === 0) {
                     list.innerHTML = '<p class="text-xs text-gray-500">Brak zamówień.</p>';
@@ -218,12 +230,14 @@
                         }
                     });
 
+                    const itemsText = items.map(i => `${i.title || 'Produkt'} (x${i.quantity || 1})`).join(', ');
+
                     return `
                         <div class="p-4 border rounded-custom flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                             <div>
                                 <span class="font-bold text-sm">#${o.order_number || o.id}</span>
                                 <span class="text-xs text-gray-400 ml-2">${new Date(o.created_at).toLocaleDateString('pl-PL')}</span>
-                                <p class="text-xs text-gray-600 mt-1">${items.map(i => `${i.title \vert{}\vert{} 'Produkt'} (x${i.quantity || 1})`).join(', ')}</p>
+                                <p class="text-xs text-gray-600 mt-1">${itemsText}</p>
                             </div>
                             <div class="text-right">
                                 <span class="font-bold text-brandViolet">${parseFloat(o.total_amount || 0).toFixed(2)} PLN</span>
