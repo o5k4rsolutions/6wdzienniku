@@ -34,6 +34,13 @@
 </head>
 <body class="min-h-screen flex flex-col justify-between overflow-x-hidden">
 
+    <div id="auth-loader" class="fixed inset-0 bg-white z-50 flex items-center justify-center">
+        <div class="text-center space-y-3">
+            <svg class="w-8 h-8 text-brandViolet animate-spin-fast mx-auto" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+            <p class="text-xs text-gray-500 font-condensed tracking-wider">Sprawdzanie sesji...</p>
+        </div>
+    </div>
+
     <div id="toast" class="fixed top-5 right-5 z-50 opacity-0 pointer-events-none transition-opacity duration-300 bg-gray-900 text-white px-5 py-3 rounded-custom shadow-xl border border-purple-500/30 text-xs">
         <span id="toast-msg">Powiadomienie</span>
     </div>
@@ -112,6 +119,22 @@
         
         const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+        async function checkActiveSession() {
+            try {
+                const { data: { session }, error } = await supabaseClient.auth.getSession();
+                if (session && session.user) {
+                    window.location.href = '/mojekonto';
+                    return;
+                }
+            } catch (err) {
+                console.error("Błąd podczas sprawdzania sesji:", err);
+            }
+            
+            const loader = document.getElementById('auth-loader');
+            if (loader) loader.style.display = 'none';
+            initFormFromUrl();
+        }
+
         function showToast(m) {
             const t = document.getElementById('toast');
             document.getElementById('toast-msg').innerText = m;
@@ -187,7 +210,7 @@
             setLoading('btn-register', true);
 
             const email = document.getElementById('r-email').value;
-            const password = document.getElementById('r-password').value;
+            const password = document.getElementById('r-password-value') || document.getElementById('r-password').value;
             const fullName = document.getElementById('r-name').value;
 
             const { data, error } = await supabaseClient.auth.signUp({
@@ -229,7 +252,7 @@
             initFormFromUrl();
         };
 
-        document.addEventListener('DOMContentLoaded', initFormFromUrl);
+        checkActiveSession();
     </script>
 </body>
 </html>
