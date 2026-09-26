@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Logowanie i Rejestracja - 6WDzienniku</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="icon" type="image/x-icon" href="https://6wdzienniku.vercel.app/6-content/logo_favicon_6.svg">
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans+Condensed:ital,wght@0,300;0,700;1,300&family=Open+Sans:ital,wght@0,300;0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: { brandViolet: '#5B21B6', brandPink: '#EC4899' },
+                    fontFamily: { sans: ['"Open Sans"', 'sans-serif'], condensed: ['"Open Sans Condensed"', 'sans-serif'] },
+                    borderRadius: { 'custom': '10px' }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Open Sans', sans-serif; background-color: #FAFAFC; }
+        h1, h2, .font-condensed { font-family: 'Open Sans Condensed', sans-serif; font-weight: 700; text-transform: uppercase; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between">
+
+    <div id="toast" class="fixed top-5 right-5 z-50 transform translate-x-full transition-transform duration-300 bg-gray-900 text-white px-5 py-3 rounded-custom shadow-xl border border-purple-500/30 text-xs">
+        <span id="toast-msg">Powiadomienie</span>
+    </div>
+
+    <header class="w-full bg-white border-b py-4">
+        <div class="max-w-7xl mx-auto px-4 text-center">
+            <a href="https://6wdzienniku.vercel.app/"><img src="https://6wdzienniku.vercel.app/6-content/logo_6wdzienn_kolor.png" class="h-16 mx-auto" alt="6WDzienniku"></a>
+        </div>
+    </header>
+
+    <main class="flex-grow flex items-center justify-center p-4">
+        <div class="bg-white p-8 rounded-custom border border-gray-200 shadow-md w-full max-w-md">
+            
+            <div id="form-login" class="space-y-4">
+                <h1 class="text-2xl text-center text-gray-900">Zaloguj się</h1>
+                <form onsubmit="handleLogin(event)" class="space-y-3">
+                    <input type="email" id="l-email" placeholder="Adres e-mail" class="w-full p-3 border rounded-custom text-xs" required>
+                    <input type="password" id="l-password" placeholder="Hasło" class="w-full p-3 border rounded-custom text-xs" required>
+                    <button type="submit" class="w-full py-3 bg-brandViolet text-white font-bold rounded-custom text-xs uppercase">Zaloguj się</button>
+                </form>
+                <div class="flex justify-between text-xs text-gray-500 pt-2">
+                    <button onclick="toggleForm('register')" class="hover:underline">Brak konta? Zarejestruj się</button>
+                    <button onclick="toggleForm('forgot')" class="hover:underline">Zapomniałeś hasła?</button>
+                </div>
+            </div>
+
+            <div id="form-register" class="space-y-4 hidden">
+                <h1 class="text-2xl text-center text-gray-900">Załóż konto</h1>
+                <form onsubmit="handleRegister(event)" class="space-y-3">
+                    <input type="text" id="r-name" placeholder="Imię i nazwisko" class="w-full p-3 border rounded-custom text-xs" required>
+                    <input type="email" id="r-email" placeholder="Adres e-mail" class="w-full p-3 border rounded-custom text-xs" required>
+                    <input type="password" id="r-password" placeholder="Hasło (min. 6 znaków)" class="w-full p-3 border rounded-custom text-xs" required minlength="6">
+                    <button type="submit" class="w-full py-3 bg-brandPink text-white font-bold rounded-custom text-xs uppercase">Zarejestruj się</button>
+                </form>
+                <div class="text-center text-xs text-gray-500 pt-2">
+                    <button onclick="toggleForm('login')" class="hover:underline">Masz już konto? Zaloguj się</button>
+                </div>
+            </div>
+
+            <div id="form-forgot" class="space-y-4 hidden">
+                <h1 class="text-2xl text-center text-gray-900">Odzyskaj hasło</h1>
+                <form onsubmit="handleForgot(event)" class="space-y-3">
+                    <input type="email" id="f-email" placeholder="Wprowadź swój e-mail" class="w-full p-3 border rounded-custom text-xs" required>
+                    <button type="submit" class="w-full py-3 bg-gray-800 text-white font-bold rounded-custom text-xs uppercase">Wyślij link resetujący</button>
+                </form>
+                <div class="text-center text-xs text-gray-500 pt-2">
+                    <button onclick="toggleForm('login')" class="hover:underline">Wróć do logowania</button>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <script>
+        const SUPABASE_URL = "https://fxksikgdberwgttvglko.supabase.co";
+        const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ4a3Npa2dkYmVyd2d0dHZnbGtvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA0MzU3NzYsImV4cCI6MjEwNjAxMTc3Nn0.sKf3vvVbaae5-mdg5zwqrgUl6AkXjENanwhDWbH_PXw";
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        function showToast(m) {
+            const t = document.getElementById('toast');
+            document.getElementById('toast-msg').innerText = m;
+            t.classList.remove('translate-x-full');
+            setTimeout(() => t.classList.add('translate-x-full'), 3000);
+        }
+
+        function toggleForm(f) {
+            ['login', 'register', 'forgot'].forEach(s => document.getElementById(`form-${s}`).classList.add('hidden'));
+            document.getElementById(`form-${f}`).classList.remove('hidden');
+        }
+
+        async function handleLogin(e) {
+            e.preventDefault();
+            const email = document.getElementById('l-email').value;
+            const password = document.getElementById('l-password').value;
+
+            const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+            if (error) { showToast(error.message); } 
+            else { window.location.href = '/mojekonto'; }
+        }
+
+        async function handleRegister(e) {
+            e.preventDefault();
+            const email = document.getElementById('r-email').value;
+            const password = document.getElementById('r-password').value;
+            const fullName = document.getElementById('r-name').value;
+
+            const { data, error } = await supabase.auth.signUp({
+                email, password, options: { data: { full_name: fullName } }
+            });
+
+            if (error) { showToast(error.message); } 
+            else { showToast('Konto zostało utworzone! Zaloguj się.'); toggleForm('login'); }
+        }
+
+        async function handleForgot(e) {
+            e.preventDefault();
+            const email = document.getElementById('f-email').value;
+            const { error } = await supabase.auth.resetPasswordForEmail(email, {
+                redirectTo: 'https://6wdzienniku.vercel.app/mojekonto'
+            });
+            if (error) { showToast(error.message); } 
+            else { showToast('Instrukcje wysłano na e-mail.'); toggleForm('login'); }
+        }
+    </script>
+</body>
+</html>
