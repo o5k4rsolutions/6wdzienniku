@@ -6,7 +6,7 @@
     <title>Produkt - 6WDzienniku</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <link rel="icon" type="image/x-icon" href="https://6wdzienniku.vercel.app/6-content/logo_favicon_6.svg">
+    <link rel="icon" type="image/x-icon" href="https://files-6wdzienniku.vercel.app/content/6wd/logo_favicon_6.svg">
     <link href="https://fonts.googleapis.com/css2?family=Open+Sans+Condensed:ital,wght@0,300;0,700;1,300&family=Open+Sans:ital,wght@0,300;0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
     <script>
         tailwind.config = {
@@ -32,7 +32,7 @@
 
     <header class="w-full bg-white border-b sticky top-0 z-40 py-3">
         <div class="max-w-7xl mx-auto px-4 flex justify-between items-center">
-            <a href="https://6wdzienniku.vercel.app/"><img src="https://6wdzienniku.vercel.app/6-content/logo_6wdzienn_kolor.png" class="h-16" alt="6WDzienniku"></a>
+            <a href="https://6wdzienniku.vercel.app/"><img src="https://files-6wdzienniku.vercel.app/content/6wd/logo_6wdzienn_kolor.png" class="h-16" alt="6WDzienniku"></a>
             <a href="/mojekonto" class="text-xs font-bold text-brandViolet border border-brandViolet px-4 py-2 rounded-custom hover:bg-purple-50 transition">Moje Konto</a>
         </div>
     </header>
@@ -56,7 +56,7 @@
 
                 <p id="p-desc" class="text-xs text-gray-600 leading-relaxed"></p>
 
-                <button onclick="addToCart()" class="w-full py-4 bg-brandViolet text-white font-bold rounded-custom uppercase text-sm hover:bg-purple-900 transition flex items-center justify-center gap-2">
+                <button id="btn-add-cart" onclick="addToCart()" class="w-full py-4 bg-brandViolet text-white font-bold rounded-custom uppercase text-sm hover:bg-purple-900 transition flex items-center justify-center gap-2">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
                     Dodaj do koszyka
                 </button>
@@ -90,40 +90,62 @@
         }
 
         async function loadProduct() {
-            const pathParts = window.location.pathname.split('/').filter(Boolean);
-            const productId = pathParts[pathParts.length - 1]; 
+            const urlParams = new URLSearchParams(window.location.search);
+            let productId = urlParams.get('id');
 
-            if(!productId || productId === 'produkt') return;
+            if (!productId) {
+                const pathParts = window.location.pathname.split('/').filter(Boolean);
+                productId = pathParts[pathParts.length - 1]; 
+            }
 
-            const { data: p } = await supabase.from('products').select('*').eq('id', productId).single();
-            if(p) {
-                currentProduct = p;
-                document.title = `${p.title} - 6WDzienniku`;
-                document.getElementById('p-title').innerText = p.title;
-                document.getElementById('p-category').innerText = p.category || 'Produkt cyfrowy';
-                document.getElementById('p-desc').innerText = p.description;
-                document.getElementById('p-img').src = p.images?.[0] || 'https://via.placeholder.com/500';
+            if (!productId || productId === 'produkt' || productId === 'produkt.html') {
+                document.getElementById('p-title').innerText = 'Nie wybrano produktu';
+                document.getElementById('p-desc').innerText = 'W adresie URL brakuje identyfikatora produktu.';
+                document.getElementById('btn-add-cart').style.display = 'none';
+                return;
+            }
 
-                if(p.is_discounted) {
-                    document.getElementById('p-price').innerText = `${parseFloat(p.discount_price).toFixed(2)} PLN`;
-                    document.getElementById('p-old-price').innerText = `${parseFloat(p.price).toFixed(2)} PLN`;
-                    document.getElementById('p-old-price').classList.remove('hidden');
-                } else {
-                    document.getElementById('p-price').innerText = `${parseFloat(p.price).toFixed(2)} PLN`;
-                }
+            const { data: p, error } = await supabase.from('products').select('*').eq('id', productId).maybeSingle();
 
-                if(p.price_before_30_days) {
-                    const el = document.getElementById('p-price-30');
-                    el.querySelector('span').innerText = parseFloat(p.price_before_30_days).toFixed(2);
-                    el.classList.remove('hidden');
-                }
+            if (error || !p) {
+                console.error('Błąd pobierania produktu z Supabase:', error);
+                document.getElementById('p-title').innerText = 'Nie znaleziono produktu';
+                document.getElementById('p-desc').innerText = 'Produkt nie istnieje w bazie danych lub wystąpił problem z uprawnieniami (RLS).';
+                document.getElementById('btn-add-cart').style.display = 'none';
+                return;
+            }
+
+            currentProduct = p;
+            document.title = `${p.title} - 6WDzienniku`;
+            document.getElementById('p-title').innerText = p.title;
+            document.getElementById('p-category').innerText = p.category || 'Produkt cyfrowy';
+            document.getElementById('p-desc').innerText = p.description || 'Brak opisu.';
+            document.getElementById('p-img').src = p.images?.[0] || 'https://via.placeholder.com/500';
+
+            if(p.is_discounted && p.discount_price !== null) {
+                document.getElementById('p-price').innerText = `${parseFloat(p.discount_price).toFixed(2)} PLN`;
+                document.getElementById('p-old-price').innerText = `${parseFloat(p.price).toFixed(2)} PLN`;
+                document.getElementById('p-old-price').classList.remove('hidden');
+            } else {
+                document.getElementById('p-price').innerText = `${parseFloat(p.price).toFixed(2)} PLN`;
+            }
+
+            if(p.price_before_30_days) {
+                const el = document.getElementById('p-price-30');
+                el.querySelector('span').innerText = parseFloat(p.price_before_30_days).toFixed(2);
+                el.classList.remove('hidden');
             }
         }
 
         function addToCart() {
             if(!currentProduct) return;
             let cart = JSON.parse(localStorage.getItem('cart') || '[]');
-            cart.push({ id: currentProduct.id, title: currentProduct.title, price: currentProduct.is_discounted ? currentProduct.discount_price : currentProduct.price, quantity: 1 });
+            cart.push({ 
+                id: currentProduct.id, 
+                title: currentProduct.title, 
+                price: (currentProduct.is_discounted && currentProduct.discount_price !== null) ? currentProduct.discount_price : currentProduct.price, 
+                quantity: 1 
+            });
             localStorage.setItem('cart', JSON.stringify(cart));
             showToast('Dodano produkt do koszyka!');
         }
