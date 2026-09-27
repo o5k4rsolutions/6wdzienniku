@@ -125,14 +125,15 @@
             if (!productId) {
                 const pathParts = window.location.pathname.split('/').filter(Boolean);
                 const produktyIndex = pathParts.indexOf('produkty');
+                
                 if (produktyIndex !== -1 && pathParts[produktyIndex + 1]) {
                     productId = pathParts[produktyIndex + 1];
-                } else {
-                    productId = pathParts[pathParts.length - 1]; 
+                } else if (pathParts.length > 0) {
+                    productId = pathParts[pathParts.length - 1];
                 }
             }
 
-            if (!productId || productId === 'produkt' || productId === 'produkt.html') {
+            if (!productId || productId === 'produkty') {
                 document.getElementById('p-title').innerText = 'Nie wybrano produktu';
                 document.getElementById('p-desc').innerText = 'W adresie URL brakuje identyfikatora produktu.';
                 document.getElementById('btn-add-cart').style.display = 'none';
@@ -142,9 +143,8 @@
             const { data: p, error } = await supabase.from('products').select('*').eq('id', productId).maybeSingle();
 
             if (error || !p) {
-                console.error('Błąd pobierania produktu z Supabase:', error);
                 document.getElementById('p-title').innerText = 'Nie znaleziono produktu';
-                document.getElementById('p-desc').innerText = 'Produkt nie istnieje w bazie danych lub wystąpił problem z połączeniem.';
+                document.getElementById('p-desc').innerText = 'Produkt nie istnieje w bazie danych.';
                 document.getElementById('btn-add-cart').style.display = 'none';
                 return;
             }
