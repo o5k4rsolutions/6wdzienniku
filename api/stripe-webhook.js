@@ -7,84 +7,59 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
+// Ważne: Webhook w Next.js/Vercel wymaga wyłączenia domyślnego bodyParser, aby zweryfikować podpis Stripe!
+export const config = {
+  api: {
+    bodyParser: false,
+  },
+};
+
+// Pomocnicza funkcja do odczytu surowego ciała żądania (raw body)
+async function buffer(readable) {
+  const chunks = [];
+  for await (const chunk of readable) {
+    chunks.push(typeof chunk === 'string' ? Buffer.from(chunk) : chunk);
+  }
+  return Buffer.concat(chunks);
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ message: 'Method Not Allowed' });
   }
 
+  const buf = await buffer(req);
+  const sig = req.headers['stripe-signature'];
+  let event;
+
   try {
-    const { userId, items, couponCode } = req.body;
-
-    if (!userId || !items || items.length === 0) {
-      return res.status(400).json({ error: 'Brak danych zamówienia.' });
-    }
-
-    // 1. Obliczenie ceny i weryfikacja produktów po stronie serwera
-    let subtotal = 0;
-    const verifiedItems = [];
-
-    for (const item of items) {
-      const { data: product } = await supabase
-        .from('products')
-        .select('*')
-        .eq('id', item.id)
-        .single();
-
-      if (!product) continue;
-
-      const price = (product.is_discounted && product.discount_price !== null) 
-        ? parseFloat(product.discount_price) 
-        : parseFloat(product.price);
-
-      subtotal += price * (item.quantity || 1);
-      verifiedItems.push({
-        id: product.id,
-        title: product.title,
-        price: price,
-        quantity: item.quantity || 1
-      });
-    }
-
-    // 2. Utworzenie zamówienia w bazie ze statusem 'pending' (oczekujące)
-    // Dopiero gdy płatność przejdzie, Twój webhook zmieni status na 'paid'!
-    const { data: order, error: orderError } = await supabase
-      .from('orders')
-      .insert({
-        user_id: userId,
-        total_amount: subtotal,
-        items: verifiedItems,
-        status: 'pending', // <--- Kluczowe: na początku jest pending, nie tworzymy dostępu dopóki nie zapłaci
-        coupon_code: couponCode || null
-      })
-      .select()
-      .single();
-
-    if (orderError) throw orderError;
-
-    // 3. Utworzenie sesji płatności Stripe z przekazaniem orderId i userId w metadata
-    const session = await stripe.checkout.sessions.create({
-      payment_method_types: ['card', 'blik'],
-      line_items: verifiedItems.map(item => ({
-        price_data: {
-          currency: 'pln',
-          product_data: { name: item.title },
-          unit_amount: Math.round(item.price * 100), // Stripe wymaga groszy
-        },
-        quantity: item.quantity,
-      })),
-      mode: 'payment',
-      success_url: `https://6wdzienniku.vercel.app/sukces?order_id=${order.id}`,
-      cancel_url: `https://6wdzienniku.vercel.app/koszyk`,
-      metadata: {
-        orderId: order.id,
-        userId: userId
-      }
-    });
-
-    return.status(200).json({ url: session.url });
-
+    // Weryfikacja, czy żądanie na pewno pochodzi ze Stripe
+    event = stripe.webhooks.constructEvent(buf, sig, process.env.STRIPE_WEBHOOK_SECRET);
   } catch (err) {
-    console.error('Błąd tworzenia sesji płatności:', err);
-    return.status(500).json({ error: 'Internal Server Error' });
+    console.error(`Błąd weryfikacji podpisu Webhooka: ${err.message}`);
+    return res.status(400).send(`Webhook Error: ${err.message}`);
   }
+
+  // Obsługa zdarzenia zakończenia płatności
+  if (event.type === 'checkout.session.completed') {
+    const session = event.data.object;
+    const orderId = session.metadata?.orderId;
+
+    if (orderId) {
+      // Aktualizacja statusu zamówienia w bazie Supabase na 'paid'
+      const { error } = await supabase
+        .from('orders')
+        .update({ status: 'paid' })
+        .eq('id', orderId);
+
+      if (error) {
+        console.error('Błąd aktualizacji statusu zamówienia w bazie:', error);
+        return res.status(500).json({ error: 'Database update failed' });
+      }
+
+      console.log(`Zamówienie ${orderId} zostało opłacone i zaktualizowane.`);
+    }
+  }
+
+  return res.status(200).json({ received: true });
 }
