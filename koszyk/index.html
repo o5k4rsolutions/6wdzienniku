@@ -305,7 +305,7 @@
                         return;
                     }
 
-                    if (currentTotalValue <= 0) {
+                    if (currentTotalValue <= 0.01) {
                         document.getElementById('stripe-container').classList.add('hidden');
                         document.getElementById('free-order-container').classList.remove('hidden');
                         return;
@@ -331,7 +331,7 @@
                     }
 
                     if (!response.ok || !data.clientSecret) {
-                        throw new Error(data.message || `Błąd serwera (${response.status}) - endpoint /api/create-payment-intent jest niedostępny.`);
+                        throw new Error(data.message || data.error || `Błąd serwera (${response.status})`);
                     }
 
                     elements = stripe.elements({ 
@@ -380,6 +380,8 @@
 
                 if (!session) {
                     alert('Musisz być zalogowany.');
+                    btn.disabled = false;
+                    btn.innerText = 'Odbierz za darmo';
                     return;
                 }
 
@@ -400,7 +402,7 @@
                 }
 
                 if (!response.ok) {
-                    throw new Error(result.message || 'Wystąpił błąd podczas finalizacji darmowego zamówienia.');
+                    throw new Error(result.error || result.message || 'Wystąpił błąd podczas finalizacji darmowego zamówienia.');
                 }
 
                 localStorage.removeItem('cart');
