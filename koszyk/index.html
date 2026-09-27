@@ -356,88 +356,90 @@
             await initCheckout();
         };
 
-        async function initCheckout() {
-            if (isFetchingIntent) return;
-            try {
-                const { data: { session } } = await supabaseClient.auth.getSession();
-                const cart = getCartItems();
-                
-                if (session) {
-                    document.getElementById('auth-section').classList.add('hidden');
-                    document.getElementById('checkout-section').classList.remove('hidden');
-                    document.getElementById('user-info-box').innerText = `Zalogowano jako: ${session.user.email}`;
+async function initCheckout() {
+    if (isFetchingIntent) return;
+    try {
+        const { data: { session } } = await supabaseClient.auth.getSession();
+        const cart = getCartItems();
+        
+        if (session) {
+            document.getElementById('auth-section').classList.add('hidden');
+            document.getElementById('checkout-section').classList.remove('hidden');
+            document.getElementById('user-info-box').innerText = `Zalogowano jako: ${session.user.email}`;
 
-                    if (!cart || cart.length === 0) {
-                        document.getElementById('checkout-section').classList.add('hidden');
-                        return;
-                    }
-
-                    if (currentTotalValue <= 0.01) {
-                        document.getElementById('stripe-container').classList.add('hidden');
-                        document.getElementById('free-order-container').classList.remove('hidden');
-                        return;
-                    } else {
-                        document.getElementById('stripe-container').classList.remove('hidden');
-                        document.getElementById('free-order-container').classList.add('hidden');
-                    }
-
-                    isFetchingIntent = true;
-                    const response = await fetch('/api/create-payment-intent', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            items: cart,
-                            userId: session.user.id,
-                            couponCode: appliedCouponCode
-                        })
-                    });
-
-                    let data = {};
-                    const contentType = response.headers.get("content-type");
-                    if (contentType && contentType.includes("application/json")) {
-                        data = await response.json();
-                    }
-
-                    if (!response.ok || !data.clientSecret) {
-                        throw new Error(data.message || data.error || `Błąd serwera (${response.status})`);
-                    }
-
-                    elements = stripe.elements({ 
-                        clientSecret: data.clientSecret,
-                        defaultValues: {
-                            billingDetails: {
-                                email: session.user.email
-                            }
-                        }
-                    });
-
-                    const paymentElement = elements.create('payment', {
-                        fields: {
-                            billingDetails: {
-                                email: 'auto' 
-                            }
-                        }
-                    });
-                    
-                    const paymentContainer = document.getElementById('payment-element');
-                    paymentContainer.innerHTML = ''; 
-                    paymentElement.mount('#payment-element');
-
-                } else {
-                    document.getElementById('auth-section').classList.remove('hidden');
-                    document.getElementById('checkout-section').classList.add('hidden');
-                }
-            } catch (err) {
-                console.error("Błąd checkout:", err);
-                const msg = document.getElementById('payment-message');
-                if (msg) {
-                    msg.innerText = err.message;
-                    msg.classList.remove('hidden');
-                }
-            } finally {
-                isFetchingIntent = false;
+            if (!cart || cart.length === 0) {
+                document.getElementById('checkout-section').classList.add('hidden');
+                return;
             }
+
+            if (currentTotalValue <= 0.01) {
+                document.getElementById('stripe-container').classList.add('hidden');
+                document.getElementById('free-order-container').classList.remove('hidden');
+                return;
+            } else {
+                document.getElementById('stripe-container').classList.remove('hidden');
+                document.getElementById('free-order-container').classList.add('hidden');
+            }
+
+            isFetchingIntent = true;
+            const response = await fetch('/api/create-payment-intent', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    items: cart,
+                    userId: session.user.id,
+                    couponCode: appliedCouponCode
+                })
+            });
+
+            let data = {};
+            const contentType = response.headers.get("content-type");
+            if (contentType && contentType.includes("application/json")) {
+                data = await response.json();
+            }
+
+            if (!response.ok || !data.clientSecret) {
+                throw new Error(data.message || data.error || `Błąd serwera (${response.status})`);
+            }
+
+            elements = stripe.elements({ 
+                clientSecret: data.clientSecret,
+                defaultValues: {
+                    billingDetails: {
+                        email: session.user.email
+                    }
+                }
+            });
+
+            // KONFIGURACJA UKRYWAJĄCA POLE E-MAIL W STRIPE PAYMENT ELEMENT
+            const paymentElement = elements.create('payment', {
+                fields: {
+                    billingDetails: {
+                        email: 'never' // Ukrywa pole e-mail w formularzu płatności Stripe
+                    }
+                }
+            });
+            
+            const paymentContainer = document.getElementById('payment-element');
+            paymentContainer.innerHTML = ''; 
+            paymentElement.mount('#payment-element');
+
+        } else {
+            document.getElementById('auth-space']?.classList?.remove('hidden'); // ewentualne sekcje logowania
+            document.getElementById('auth-section').classList.remove('hidden');
+            document.getElementById('checkout-section').classList.add('hidden');
         }
+    } catch (err) {
+        console.error("Błąd checkout:", err);
+        const msg = document.getElementById('payment-message');
+        if (msg) {
+            msg.innerText = err.message;
+            msg.classList.remove('hidden');
+        }
+    } finally {
+        isFetchingIntent = false;
+    }
+}
 
         window.processFreeOrder = async function() {
             const btn = document.getElementById('free-submit-btn');
