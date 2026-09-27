@@ -53,10 +53,17 @@
         </div>
     </header>
 
-    <main class="max-w-6xl mx-auto px-4 py-10 w-full flex-grow">
+    <main class="max-w-6xl mx-auto px-4 py-10 w-full flex-grow space-y-6">
+        <div>
+            <a href="https://6wdzienniku.vercel.app/sklep" class="inline-flex items-center gap-2 text-sm font-semibold text-gray-600 hover:text-brandViolet transition bg-white px-4 py-2 rounded-custom border border-gray-200 shadow-xs">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+                Wróć do sklepu
+            </a>
+        </div>
+
         <div id="product-container" class="grid grid-cols-1 md:grid-cols-2 gap-10 bg-white p-8 rounded-custom border border-gray-200 shadow-sm">
             <div class="space-y-4">
-                <img id="p-img" src="https://via.placeholder.com/500" class="w-full h-80 object-cover rounded-custom border" alt="Produkt">
+                <img id="p-img" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='500' height='300' viewBox='0 0 500 300'><rect width='500' height='300' fill='%23f3f4f6'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' fill='%239ca3af' font-family='sans-serif' font-size='16'>Ładowanie zdjęcia...</text></svg>" class="w-full h-80 object-cover rounded-custom border" alt="Produkt">
             </div>
             <div class="space-y-6">
                 <span id="p-category" class="text-xs font-bold uppercase text-brandPink">Kategoria</span>
@@ -90,7 +97,8 @@
     <script>
         const SUPABASE_URL = "https://fxksikgdberwgttvglko.supabase.co";
         const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ4a3Npa2dkYmVyd2d0dHZnbGtvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA0MzU3NzYsImV4cCI6MjEwNjAxMTc3Nn0.sKf3vvVbaae5-mdg5zwqrgUl6AkXjENanwhDWbH_PXw";
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         let currentProduct = null;
 
         function showToast(msg) {
@@ -140,7 +148,7 @@
                 return;
             }
 
-            const { data: p, error } = await supabase.from('products').select('*').eq('id', productId).maybeSingle();
+            const { data: p, error } = await supabaseClient.from('products').select('*').eq('id', productId).maybeSingle();
 
             if (error || !p) {
                 document.getElementById('p-title').innerText = 'Nie znaleziono produktu';
@@ -156,7 +164,7 @@
             document.getElementById('p-desc').innerText = p.description || 'Brak opisu.';
             
             const images = Array.isArray(p.images) && p.images.length > 0 ? p.images : [];
-            document.getElementById('p-img').src = images[0] || 'https://via.placeholder.com/500';
+            document.getElementById('p-img').src = images[0] || "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='500' height='300' viewBox='0 0 500 300'><rect width='500' height='300' fill='%23f3f4f6'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' fill='%239ca3af' font-family='sans-serif' font-size='16'>Brak zdjęcia</text></svg>";
 
             if(p.is_discounted && p.discount_price !== null) {
                 document.getElementById('p-price').innerText = `${parseFloat(p.discount_price).toFixed(2)} PLN`;
@@ -178,7 +186,7 @@
             let cart = JSON.parse(localStorage.getItem('cart') || '[]');
             const existing = cart.find(item => item.id === currentProduct.id);
             const images = Array.isArray(currentProduct.images) && currentProduct.images.length > 0 ? currentProduct.images : [];
-            const firstImage = images[0] || 'https://via.placeholder.com/300';
+            const firstImage = images[0] || '';
 
             if (existing) {
                 existing.quantity += 1;
