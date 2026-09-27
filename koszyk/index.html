@@ -50,12 +50,12 @@
             <svg class="w-5 h-5 flex-shrink-0 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
             </svg>
-            <span id="cart-alert-text">Od ostatniej Twojej wizyty zmieniły się parametry w Twoim koszyku, z powodu zmian w produktach.</span>
+            <span id="cart-alert-text">Ceny lub dostępność produktów w Twoim koszyku zostały zaktualizowane na podstawie danych z bazy.</span>
         </div>
 
         <div id="cart-content" class="grid grid-cols-1 lg:grid-cols-12 gap-8">
             <div class="lg:col-span-7 space-y-4" id="cart-items-container">
-                <p class="text-gray-500 font-sans">Twój koszyk jest pusty.</p>
+                <p class="text-gray-500 font-sans">Ładowanie koszyka...</p>
             </div>
 
             <div class="lg:col-span-5">
@@ -95,7 +95,7 @@
                         </div>
                     </div>
 
-                    <div id="auth-section">
+                    <div id="auth-section" class="hidden">
                         <div class="bg-purple-50 p-4 rounded-custom border border-purple-100 text-xs text-purple-900 mb-4">
                             Zaloguj się, aby sfinalizować zamówienie i otrzymać dostęp do materiałów.
                         </div>
@@ -103,19 +103,19 @@
                     </div>
 
                     <div id="checkout-section" class="hidden">
-                        <div id="user-info-box" class="text-xs text-gray-500 mb-4"></div>
+                        <div id="user-info-box" class="text-xs text-gray-500 mb-4 font-medium"></div>
                         
                         <div id="stripe-container">
                             <form id="payment-form">
                                 <div id="payment-element" class="mb-4"></div>
                                 <button id="submit-btn" type="submit" class="w-full py-3.5 bg-gradient-to-r from-brandViolet to-brandPink text-white font-bold rounded-custom shadow-md hover:opacity-95 transition disabled:opacity-50">Zapłać teraz</button>
-                                <div id="payment-message" class="text-xs text-red-500 mt-2 hidden"></div>
+                                <div id="payment-message" class="text-xs text-red-500 mt-2 hidden font-semibold"></div>
                             </form>
                         </div>
 
                         <div id="free-order-container" class="hidden space-y-3">
                             <div class="bg-green-50 border border-green-200 p-3 rounded-custom text-xs text-green-800 font-medium">
-                                Twoje zamówienie jest całkowicie darmowe! Nie musisz podawać karty płatniczej.
+                                Twoje zamówienie po uwzględnieniu rabatu jest całkowicie darmowe! Nie musisz podawać karty płatniczej.
                             </div>
                             <button type="button" id="free-submit-btn" onclick="processFreeOrder()" class="w-full py-3.5 bg-green-600 hover:bg-green-700 text-white font-bold rounded-custom shadow-md transition">Odbierz za darmo</button>
                         </div>
@@ -125,6 +125,7 @@
         </div>
     </main>
 
+    <!-- Stopka -->
     <footer class="bg-white border-t border-gray-200 py-8 text-center text-sm text-gray-500">
         <div class="max-w-6xl mx-auto px-4 space-y-1">
             <p>© 2026 <b>6WDzienniku</b></p>
@@ -144,6 +145,7 @@
         let appliedCouponCode = null;
         let discountPercent = 0;
         let currentTotalValue = 0;
+        let isFetchingIntent = false;
 
         function showToast(msg) {
             const toast = document.getElementById('toast');
@@ -180,7 +182,6 @@
             if (!cart || cart.length === 0) return;
 
             try {
-
                 const productIds = cart.map(item => item.id || item.product_id).filter(Boolean);
                 if (productIds.length === 0) return;
 
@@ -288,12 +289,12 @@
             document.getElementById('total-val').innerText = `${currentTotalValue.toFixed(2)} PLN`;
         }
 
-        window.removeItem = function(idx) {
+        window.removeItem = async function(idx) {
             let cart = getCartItems();
             cart.splice(idx, 1);
             localStorage.setItem('cart', JSON.stringify(cart));
-            renderCart();
-            initCheckout();
+            await renderCart();
+            await initCheckout();
         };
 
         window.applyCoupon = async function() {
@@ -336,11 +337,11 @@
             document.getElementById('applied-code-percent').innerText = discountPercent;
 
             showToast(`Zastosowano kod! Rabat: ${discountPercent}%`);
-            renderCart();
-            initCheckout();
+            await renderCart();
+            await initCheckout();
         };
 
-        window.removeCoupon = function() {
+        window.removeCoupon = async function() {
             appliedCouponCode = null;
             discountPercent = 0;
 
@@ -352,11 +353,12 @@
             document.getElementById('coupon-applied-badge').classList.add('hidden');
 
             showToast('Usunięto kod rabatowy.');
-            renderCart();
-            initCheckout();
+            await renderCart();
+            await initCheckout();
         };
 
         async function initCheckout() {
+            if (isFetchingIntent) return;
             try {
                 const { data: { session } } = await supabaseClient.auth.getSession();
                 const cart = getCartItems();
@@ -380,6 +382,7 @@
                         document.getElementById('free-order-container').classList.add('hidden');
                     }
 
+                    isFetchingIntent = true;
                     const response = await fetch('/api/create-payment-intent', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -432,6 +435,8 @@
                     msg.innerText = err.message;
                     msg.classList.remove('hidden');
                 }
+            } finally {
+                isFetchingIntent = false;
             }
         }
 
@@ -473,49 +478,46 @@
 
                 localStorage.removeItem('cart');
                 
-                showToast('Zamówienie opłacone pomyślnie!');
+                showToast('Zamówienie zrealizowane pomyślnie!');
                 setTimeout(() => {
                     window.location.href = '/mojekonto?payment_success=true';
                 }, 1000);
 
             } catch (err) {
                 console.error("Błąd darmowego zamówienia:", err);
-                alert(err.message || 'Wystąpił błąd.');
+                alert(err.message || 'Wystąpił nieznany błąd.');
                 btn.disabled = false;
                 btn.innerText = 'Odbierz za darmo';
             }
         };
 
-        document.addEventListener('DOMContentLoaded', async () => {
+        document.getElementById('payment-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const submitBtn = document.getElementById('submit-btn');
+            const messageDiv = document.getElementById('payment-message');
+            
+            submitBtn.disabled = true;
+            submitBtn.innerText = 'Przetwarzanie płatności...';
+            messageDiv.classList.add('hidden');
+
+            const { error } = await stripe.confirmPayment({
+                elements,
+                confirmParams: {
+                    return_url: window.location.origin + '/mojekonto?payment_success=true',
+                },
+            });
+
+            if (error) {
+                messageDiv.innerText = error.message;
+                messageDiv.classList.remove('hidden');
+                submitBtn.disabled = false;
+                submitBtn.innerText = 'Zapłać teraz';
+            }
+        });
+
+        window.addEventListener('DOMContentLoaded', async () => {
             await renderCart();
             await initCheckout();
-
-            const paymentForm = document.getElementById('payment-form');
-            if (paymentForm) {
-                paymentForm.addEventListener('submit', async (e) => {
-                    e.preventDefault();
-                    if (!elements) return;
-
-                    const submitBtn = document.getElementById('submit-btn');
-                    submitBtn.disabled = true;
-                    submitBtn.innerText = 'Przetwarzanie...';
-
-                    const { error } = await stripe.confirmPayment({
-                        elements,
-                        confirmParams: {
-                            return_url: window.location.origin + '/mojekonto?payment_success=true',
-                        },
-                    });
-
-                    if (error) {
-                        const msg = document.getElementById('payment-message');
-                        msg.innerText = error.message;
-                        msg.classList.remove('hidden');
-                        submitBtn.disabled = false;
-                        submitBtn.innerText = 'Zapłać teraz';
-                    }
-                });
-            }
         });
     </script>
 </body>
