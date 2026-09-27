@@ -2,155 +2,89 @@ import { createClient } from '@supabase/supabase-js';
 import Stripe from 'stripe';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-
-// Inicjalizacja klienta Supabase z kluczem SERVICE_ROLE (wymagany do modyfikacji bazy z pominięciem RLS)
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
-
-// Wyłączenie automatycznego bodyParser w Vercel/Next.js dla weryfikacji podpisu Stripe
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-};
-
-// Pomocnicza funkcja pobierająca surowy bufor danych (raw body)
-async function getRawBody(readable) {
-  const chunks = [];
-  for await (const chunk of readable) {
-    chunks.push(typeof chunk === 'string' ? Buffer.from(chunk) : chunk);
-  }
-  return Buffer.concat(chunks);
-}
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ message: 'Method Not Allowed' });
   }
 
-  const rawBody = await getRawBody(req);
-  const sig = req.headers['stripe-signature'];
-  let event;
-
-  // 1. Weryfikacja podpisu webhooka od Stripe
   try {
-    event = stripe.webhooks.constructEvent(
-      rawBody,
-      sig,
-      process.env.STRIPE_WEBHOOK_SECRET
-    );
-  } catch (err) {
-    console.error(`Błąd weryfikacji podpisu Webhooka: ${err.message}`);
-    return res.status(400).send(`Webhook Error: ${err.message}`);
-  }
+    const { userId, items, couponCode } = req.body;
 
-  // 2. Obsługa udanej płatności
-  if (event.type === 'payment_intent.succeeded') {
-    const paymentIntent = event.data.object;
-    const { orderId, userId } = paymentIntent.metadata || {};
-
-    if (!orderId || !userId) {
-      console.error('Brak orderId lub userId w metadata PaymentIntent');
-      return res.status(400).json({ error: 'Missing metadata' });
+    if (!userId || !items || items.length === 0) {
+      return res.status(400).json({ error: 'Brak danych zamówienia.' });
     }
 
-    try {
-      // A. Aktualizacja statusu zamówienia w bazie Supabase na 'paid'
-      const { data: order, error: orderError } = await supabase
-        .from('orders')
-        .update({ status: 'paid', stripe_payment_intent_id: paymentIntent.id })
-        .eq('id', orderId)
-        .select()
+    // 1. Obliczenie ceny i weryfikacja produktów po stronie serwera
+    let subtotal = 0;
+    const verifiedItems = [];
+
+    for (const item of items) {
+      const { data: product } = await supabase
+        .from('products')
+        .select('*')
+        .eq('id', item.id)
         .single();
 
-      if (orderError) throw orderError;
+      if (!product) continue;
 
-      // B. Pobranie danych profilu użytkownika
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('email, full_name')
-        .eq('id', userId)
-        .single();
+      const price = (product.is_discounted && product.discount_price !== null) 
+        ? parseFloat(product.discount_price) 
+        : parseFloat(product.price);
 
-      if (profileError) throw profileError;
-
-      const items = typeof order.items === 'string' ? JSON.parse(order.items) : order.items;
-      let hasEproducts = false;
-
-      // C. Przypisanie dostępów do plików w tabeli `user_accesses`
-      for (const item of items) {
-        const { data: product } = await supabase
-          .from('products')
-          .select('*')
-          .eq('id', item.id)
-          .single();
-
-        if (product && product.product_type === 'eproduct' && product.download_files) {
-          hasEproducts = true;
-          const files = typeof product.download_files === 'string'
-            ? JSON.parse(product.download_files)
-            : product.download_files;
-
-          for (const file of files) {
-            await supabase.from('user_accesses').insert({
-              user_id: userId,
-              order_id: orderId,
-              product_id: product.id,
-              title: file.name || product.title,
-              file_type: file.type || 'zip',
-              download_url: file.url
-            });
-          }
-        }
-      }
-
-      // D. Wysyłka e-maila 1: Potwierdzenie zamówienia przez Brevo API
-      await fetch('https://api.brevo.com/v3/smtp/email', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'api-key': process.env.BREVO_API_KEY
-        },
-        body: JSON.stringify({
-          to: [{ email: profile.email, name: profile.full_name }],
-          templateId: parseInt(process.env.BREVO_TEMPLATE_ORDER_CONFIRMATION_ID),
-          params: {
-            FULL_NAME: profile.full_name,
-            ORDER_NUMBER: order.order_number,
-            TOTAL_AMOUNT: parseFloat(order.total_amount).toFixed(2),
-            ITEMS: items
-          }
-        })
+      subtotal += price * (item.quantity || 1);
+      verifiedItems.push({
+        id: product.id,
+        title: product.title,
+        price: price,
+        quantity: item.quantity || 1
       });
-
-      // E. Wysyłka e-maila 2: Dostęp do plików (jeśli zamówiono e-produkt)
-      if (hasEproducts && process.env.BREVO_TEMPLATE_DIGITAL_ACCESS_ID) {
-        await fetch('https://api.brevo.com/v3/smtp/email', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'api-key': process.env.BREVO_API_KEY
-          },
-          body: JSON.stringify({
-            to: [{ email: profile.email, name: profile.full_name }],
-            templateId: parseInt(process.env.BREVO_TEMPLATE_DIGITAL_ACCESS_ID),
-            params: {
-              FULL_NAME: profile.full_name,
-              PRODUCT_TITLE: items.map(i => i.title).join(', '),
-              ACCESS_LINK: 'https://6wdzienniku.vercel.app/mojekonto'
-            }
-          })
-        });
-      }
-
-    } catch (dbError) {
-      console.error('Błąd podczas przetwarzania zamówienia:', dbError);
-      return res.status(500).json({ error: 'Processing order failed' });
     }
-  }
 
-  // Zwrócenie potwierdzenia odbioru do serwerów Stripe
-  res.status(200).json({ received: true });
+    // 2. Utworzenie zamówienia w bazie ze statusem 'pending' (oczekujące)
+    // Dopiero gdy płatność przejdzie, Twój webhook zmieni status na 'paid'!
+    const { data: order, error: orderError } = await supabase
+      .from('orders')
+      .insert({
+        user_id: userId,
+        total_amount: subtotal,
+        items: verifiedItems,
+        status: 'pending', // <--- Kluczowe: na początku jest pending, nie tworzymy dostępu dopóki nie zapłaci
+        coupon_code: couponCode || null
+      })
+      .select()
+      .single();
+
+    if (orderError) throw orderError;
+
+    // 3. Utworzenie sesji płatności Stripe z przekazaniem orderId i userId w metadata
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ['card', 'blik'],
+      line_items: verifiedItems.map(item => ({
+        price_data: {
+          currency: 'pln',
+          product_data: { name: item.title },
+          unit_amount: Math.round(item.price * 100), // Stripe wymaga groszy
+        },
+        quantity: item.quantity,
+      })),
+      mode: 'payment',
+      success_url: `https://6wdzienniku.vercel.app/sukces?order_id=${order.id}`,
+      cancel_url: `https://6wdzienniku.vercel.app/koszyk`,
+      metadata: {
+        orderId: order.id,
+        userId: userId
+      }
+    });
+
+    return.status(200).json({ url: session.url });
+
+  } catch (err) {
+    console.error('Błąd tworzenia sesji płatności:', err);
+    return.status(500).json({ error: 'Internal Server Error' });
+  }
 }
