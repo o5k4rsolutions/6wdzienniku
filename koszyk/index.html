@@ -46,6 +46,13 @@
     <main class="flex-grow max-w-5xl mx-auto px-4 sm:px-6 py-10 w-full">
         <h1 class="text-3xl sm:text-4xl font-condensed mb-8">Twój <span class="text-gradient">Koszyk</span></h1>
 
+        <div id="cart-alert-box" class="hidden mb-6 bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-custom text-sm flex items-center gap-3 shadow-sm">
+            <svg class="w-5 h-5 flex-shrink-0 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+            </svg>
+            <span id="cart-alert-text">Od ostatniej Twojej wizyty zmieniły się parametry w Twoim koszyku, z powodu zmian w produktach.</span>
+        </div>
+
         <div id="cart-content" class="grid grid-cols-1 lg:grid-cols-12 gap-8">
             <div class="lg:col-span-7 space-y-4" id="cart-items-container">
                 <p class="text-gray-500 font-sans">Twój koszyk jest pusty.</p>
@@ -168,7 +175,66 @@
             }, 0);
         }
 
-        function renderCart() {
+        async function validateAndSyncCart() {
+            let cart = getCartItems();
+            if (!cart || cart.length === 0) return;
+
+            try {
+
+                const productIds = cart.map(item => item.id || item.product_id).filter(Boolean);
+                if (productIds.length === 0) return;
+
+                const { data: dbProducts, error } = await supabaseClient
+                    .from('products')
+                    .select('*')
+                    .in('id', productIds);
+
+                if (error) {
+                    console.error("Błąd walidacji koszyka z bazą:", error);
+                    return;
+                }
+
+                let cartChanged = false;
+                let validCart = [];
+
+                for (let item of cart) {
+                    const itemId = item.id || item.product_id;
+                    const dbProduct = dbProducts ? dbProducts.find(p => p.id == itemId) : null;
+
+                    if (!dbProduct || dbProduct.is_active === false || dbProduct.active === false) {
+                        cartChanged = true;
+                        continue; 
+                    }
+
+                    const dbPrice = parseFloat(dbProduct.price || dbProduct.amount || 0);
+                    const currentItemPrice = parseFloat(item.price || 0);
+
+                    if (dbPrice !== currentItemPrice) {
+                        cartChanged = true;
+                        item.price = dbPrice; 
+                    }
+
+                    if (dbProduct.title) item.title = dbProduct.title;
+                    if (dbProduct.image) item.image = dbProduct.image;
+
+                    validCart.push(item);
+                }
+
+                if (cartChanged) {
+                    localStorage.setItem('cart', JSON.stringify(validCart));
+                    const alertBox = document.getElementById('cart-alert-box');
+                    if (alertBox) {
+                        alertBox.classList.remove('hidden');
+                    }
+                }
+            } catch (err) {
+                console.error("Wystąpił błąd podczas walidacji koszyka:", err);
+            }
+        }
+
+        async function renderCart() {
+            await validateAndSyncCart();
+
             const cart = getCartItems();
             const container = document.getElementById('cart-items-container');
 
@@ -420,9 +486,9 @@
             }
         };
 
-        document.addEventListener('DOMContentLoaded', () => {
-            renderCart();
-            initCheckout();
+        document.addEventListener('DOMContentLoaded', async () => {
+            await renderCart();
+            await initCheckout();
 
             const paymentForm = document.getElementById('payment-form');
             if (paymentForm) {
