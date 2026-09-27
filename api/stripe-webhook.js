@@ -7,14 +7,10 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
-// Ważne: Webhook w Next.js/Vercel wymaga wyłączenia domyślnego bodyParser, aby zweryfikować podpis Stripe!
 export const config = {
-  api: {
-    bodyParser: false,
-  },
+  api: { bodyParser: false },
 };
 
-// Pomocnicza funkcja do odczytu surowego ciała żądania (raw body)
 async function buffer(readable) {
   const chunks = [];
   for await (const chunk of readable) {
@@ -33,31 +29,33 @@ export default async function handler(req, res) {
   let event;
 
   try {
-    // Weryfikacja, czy żądanie na pewno pochodzi ze Stripe
     event = stripe.webhooks.constructEvent(buf, sig, process.env.STRIPE_WEBHOOK_SECRET);
   } catch (err) {
-    console.error(`Błąd weryfikacji podpisu Webhooka: ${err.message}`);
+    console.error(`Błąd weryfikacji podpisu webhooka: ${err.message}`);
     return res.status(400).send(`Webhook Error: ${err.message}`);
   }
 
-  // Obsługa zdarzenia zakończenia płatności
-  if (event.type === 'checkout.session.completed') {
-    const session = event.data.object;
-    const orderId = session.metadata?.orderId;
+  // NASŁUCHUJEMY NA ZDARZENIE SUKCESU DLA PAYMENT INTENT
+  if (event.type === 'payment_intent.succeeded') {
+    const paymentIntent = event.data.object;
+    const orderId = paymentIntent.metadata?.orderId;
 
     if (orderId) {
-      // Aktualizacja statusu zamówienia w bazie Supabase na 'paid'
+      // Aktualizujemy status istniejącego zamówienia 'pending' na 'paid'
       const { error } = await supabase
         .from('orders')
         .update({ status: 'paid' })
         .eq('id', orderId);
 
       if (error) {
-        console.error('Błąd aktualizacji statusu zamówienia w bazie:', error);
+        console.error('Błąd aktualizacji zamówienia w bazie:', error);
         return res.status(500).json({ error: 'Database update failed' });
       }
 
-      console.log(`Zamówienie ${orderId} zostało opłacone i zaktualizowane.`);
+      console.log(`Zamówienie o ID ${orderId} zostało pomyślnie opłacone.`);
+      
+      // Tutaj możesz też dodać logikę przyznawania dostępu użytkownikowi do produktów,
+      // jeśli nie robisz tego po stronie frontendu lub triggerów Supabase.
     }
   }
 
