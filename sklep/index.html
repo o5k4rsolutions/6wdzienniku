@@ -74,6 +74,9 @@
             <p class="text-gray-600 text-sm sm:text-base mt-2 max-w-xl mx-auto">Wybierz testy, kartkówki i sprawdziany, które pomogą Ci osiągnąć najlepsze wyniki.</p>
         </div>
 
+        <div id="categories-container" class="flex flex-wrap items-center justify-center gap-2 mb-8">
+        </div>
+
         <div id="products-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             <div class="col-span-full text-center py-12 text-gray-400 font-sans">Ładowanie produktów...</div>
         </div>
@@ -93,6 +96,7 @@
         const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         let cachedProducts = [];
+        let currentCategory = 'all';
 
         function showToast(message) {
             const toast = document.getElementById('toast');
@@ -144,18 +148,56 @@
             showToast(`Dodano do koszyka: ${product.title}`);
         }
 
-        async function loadProducts() {
-            const { data: products, error } = await supabaseClient.from('products').select('*');
-            const grid = document.getElementById('products-grid');
+        window.filterCategory = function(category) {
+            currentCategory = category;
+            renderCategories();
+            renderProducts();
+        };
 
-            if (error || !products || products.length === 0) {
-                grid.innerHTML = '<div class="col-span-full text-center py-12 text-gray-500 font-sans">Brak produktów do wyświetlenia.</div>';
+        function renderCategories() {
+            const container = document.getElementById('categories-container');
+            if (!container) return;
+
+            const categoryCounts = {};
+            cachedProducts.forEach(p => {
+                const cat = p.category || p.kategoria || 'Inne';
+                categoryCounts[cat] = (categoryCounts[cat] || 0) + 1;
+            });
+
+            const totalCount = cachedProducts.length;
+
+            let html = `
+                <button onclick="filterCategory('all')" class="px-4 py-2 rounded-custom text-xs font-semibold transition ${currentCategory === 'all' ? 'bg-brandViolet text-white shadow' : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50'}">
+                    Wszystkie (${totalCount})
+                </button>
+            `;
+
+            for (const [catName, count] of Object.entries(categoryCounts)) {
+                const isActive = currentCategory === catName;
+                html += `
+                    <button onclick="filterCategory('${catName}')" class="px-4 py-2 rounded-custom text-xs font-semibold transition ${isActive ? 'bg-brandViolet text-white shadow' : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50'}">
+                        ${catName} (${count})
+                    </button>
+                `;
+            }
+
+            container.innerHTML = html;
+        }
+
+        function renderProducts() {
+            const grid = document.getElementById('products-grid');
+            if (!grid) return;
+
+            const filteredProducts = currentCategory === 'all' 
+                ? cachedProducts 
+                : cachedProducts.filter(p => (p.category || p.kategoria || 'Inne') === currentCategory);
+
+            if (filteredProducts.length === 0) {
+                grid.innerHTML = '<div class="col-span-full text-center py-12 text-gray-500 font-sans">Brak produktów w tej kategorii.</div>';
                 return;
             }
 
-            cachedProducts = products;
-
-            grid.innerHTML = products.map(product => {
+            grid.innerHTML = filteredProducts.map(product => {
                 const currentPrice = product.is_discounted ? product.discount_price : product.price;
                 const images = Array.isArray(product.images) && product.images.length > 0 ? product.images : [];
                 const firstImage = images[0] || 'https://images.unsplash.com/photo-1434030216411-0b793f4b4173?auto=format&fit=crop&w=600&q=80';
@@ -191,6 +233,20 @@
                     </div>
                 `;
             }).join('');
+        }
+
+        async function loadProducts() {
+            const { data: products, error } = await supabaseClient.from('products').select('*');
+            const grid = document.getElementById('products-grid');
+
+            if (error || !products || products.length === 0) {
+                grid.innerHTML = '<div class="col-span-full text-center py-12 text-gray-500 font-sans">Brak produktów do wyświetlenia.</div>';
+                return;
+            }
+
+            cachedProducts = products;
+            renderCategories();
+            renderProducts();
         }
 
         document.addEventListener('DOMContentLoaded', () => {
