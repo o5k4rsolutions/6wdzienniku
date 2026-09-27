@@ -3,351 +3,530 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sklep - Koszyk i Płatność</title>
-    <!-- Tailwind CSS CDN -->
+    <title>Koszyk - 6WDzienniku</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Stripe JS SDK -->
     <script src="https://js.stripe.com/v3/"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="icon" type="image/x-icon" href="https://files-6wdzienniku.vercel.app/content/6wd/logo_favicon_6.svg">
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans+Condensed:ital,wght@0,300;0,700;1,300&family=Open+Sans:ital,wght@0,300;0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: { brandViolet: '#5B21B6', brandPink: '#EC4899' },
+                    fontFamily: { sans: ['"Open Sans"', 'sans-serif'], condensed: ['"Open Sans Condensed"', 'sans-serif'] },
+                    borderRadius: { 'custom': '10px' }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Open Sans', sans-serif; background-color: #FAFAFC; color: #1F2937; }
+        h1, h2, h3, .font-condensed { font-family: 'Open Sans Condensed', sans-serif; font-weight: 700; text-transform: uppercase; }
+        .text-gradient { background: linear-gradient(135deg, #5B21B6 0%, #EC4899 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    </style>
 </head>
-<body class="bg-gray-50 text-gray-800 font-sans min-h-screen flex flex-col">
+<body class="min-h-screen flex flex-col justify-between overflow-x-hidden">
 
-    <!-- Header / Navbar -->
-    <header class="bg-white shadow-sm sticky top-0 z-50">
-        <div class="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
-            <h1 class="text-xl font-bold tracking-tight text-gray-900">Mój Sklep</h1>
-            <div id="user-status" class="text-sm font-medium text-gray-600">
-                Ładowanie profilu...
-            </div>
+    <div id="toast" class="fixed top-5 right-5 z-50 opacity-0 pointer-events-none transition-opacity duration-300 bg-gray-900 text-white px-5 py-3 rounded-custom shadow-xl border border-purple-500/30 flex items-center gap-3">
+        <span id="toast-message" class="text-sm font-medium">Powiadomienie</span>
+    </div>
+
+    <header class="w-full bg-white border-b border-gray-200 sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
+            <a href="https://6wdzienniku.vercel.app/">
+                <img src="https://files-6wdzienniku.vercel.app/content/6wd/logo_6wdzienn_kolor.png" alt="6 w dzienniku" class="h-16 sm:h-20 object-contain">
+            </a>
+            <a href="/sklep" class="text-sm font-semibold text-brandViolet hover:underline flex items-center gap-1 transition">
+                ← Powrót do sklepu
+            </a>
         </div>
     </header>
 
-    <!-- Main Content Container -->
-    <main class="max-w-7xl mx-auto px-4 py-8 flex-grow w-full grid grid-cols-1 lg:grid-cols-12 gap-8">
-        
-        <!-- Kolumna produktów w koszyku (Lewa strona) -->
-        <section class="lg:col-span-7 bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-between">
-            <div>
-                <h2 class="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-100">Twój Koszyk</h2>
-                <div id="cart-items-container" class="space-y-4 mb-6">
-                    <!-- Dynamiczne elementy koszyka -->
-                    <p class="text-gray-500 font-sans">Ładowanie koszyka...</p>
-                </div>
+    <main class="flex-grow max-w-5xl mx-auto px-4 sm:px-6 py-10 w-full">
+        <h1 class="text-3xl sm:text-4xl font-condensed mb-8">Twój <span class="text-gradient">Koszyk</span></h1>
+
+        <div id="cart-alert-box" class="hidden mb-6 bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-custom text-sm flex items-center gap-3 shadow-sm">
+            <svg class="w-5 h-5 flex-shrink-0 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+            </svg>
+            <span id="cart-alert-text">Ceny lub dostępność produktów w Twoim koszyku uległy zmianie od Twojej poprzedniej wizyty.</span>
+        </div>
+
+        <div id="cart-content" class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            <div class="lg:col-span-7 space-y-4" id="cart-items-container">
+                <p class="text-gray-500 font-sans">Ładowanie koszyka...</p>
             </div>
 
-            <!-- Sekcja Kuponów -->
-            <div class="mt-4 pt-4 border-t border-gray-100">
-                <div id="coupon-input-container" class="flex gap-2">
-                    <input type="text" id="coupon-code" placeholder="Kod rabatowy" class="flex-grow px-4 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-black">
-                    <button onclick="applyCoupon()" class="bg-gray-900 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-gray-800 transition">Zastosuj</button>
-                </div>
-                <div id="coupon-applied-badge" class="hidden flex justify-between items-center bg-green-50 border border-green-200 p-3 rounded-xl">
-                    <span class="text-xs text-green-700 font-medium" id="applied-coupon-text">Kupon aktywny</span>
-                    <button onclick="removeCoupon()" class="text-xs text-red-600 font-medium hover:underline">Usuń</button>
-                </div>
-            </div>
-        </section>
+            <div class="lg:col-span-5">
+                <div class="bg-white p-6 rounded-custom border border-gray-200 shadow-sm space-y-6">
+                    <h2 class="text-xl font-condensed border-b border-gray-100 pb-3">Podsumowanie</h2>
 
-        <!-- Kolumna Podsumowania i Płatności (Prawa strona) -->
-        <section class="lg:col-span-5 bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-between">
-            <div>
-                <h2 class="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-100">Podsumowanie</h2>
-                
-                <div class="space-y-3 text-sm">
-                    <div class="flex justify-between text-gray-600">
-                        <span>Wartość produktów:</span>
-                        <span id="subtotal-val" class="font-medium text-gray-900">0.00 PLN</span>
+                    <div>
+                        <div id="coupon-input-container" class="flex gap-2">
+                            <input type="text" id="coupon-code" placeholder="Kod rabatowy" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-custom focus:outline-none focus:border-brandViolet uppercase">
+                            <button type="button" onclick="applyCoupon()" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 text-xs font-semibold rounded-custom transition">Zastosuj</button>
+                        </div>
+                        <p id="coupon-error-msg" class="text-xs text-red-500 font-semibold mt-2 hidden"></p>
                     </div>
-                    <div id="discount-row" class="flex justify-between text-green-600 hidden">
-                        <span>Rabat:</span>
-                        <span id="discount-val">-0.00 PLN</span>
+
+                    <div id="coupon-applied-badge" class="hidden flex items-center justify-between bg-green-50 border border-green-200 p-3 rounded-custom text-xs">
+                        <div class="flex items-center gap-2 text-green-700 font-semibold">
+                            <svg class="w-4 h-4 fill-current" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                            </svg>
+                            <span>Aktywny kod: <b id="applied-code-name" class="uppercase"></b> (-<span id="applied-code-percent">0</span>%)</span>
+                        </div>
+                        <button type="button" onclick="removeCoupon()" class="text-red-500 hover:underline font-semibold">Usuń</button>
                     </div>
-                    <div class="flex justify-between text-lg font-bold text-gray-900 pt-3 border-t border-gray-100">
-                        <span>Do zapłaty:</span>
-                        <span id="total-val">0.00 PLN</span>
+
+                    <div class="space-y-2 text-sm border-t border-b border-gray-100 py-4">
+                        <div class="flex justify-between text-gray-600">
+                            <span>Wartość produktów:</span>
+                            <span id="subtotal-val">0.00 PLN</span>
+                        </div>
+                        <div id="discount-row" class="flex justify-between text-pink-600 hidden">
+                            <span>Rabat:</span>
+                            <span id="discount-val">-0.00 PLN</span>
+                        </div>
+                        <div class="flex justify-between font-bold text-base text-gray-900 pt-2">
+                            <span>Razem:</span>
+                            <span id="total-val" class="text-brandViolet">0.00 PLN</span>
+                        </div>
+                    </div>
+
+                    <div id="auth-section" class="hidden">
+                        <div class="bg-purple-50 p-4 rounded-custom border border-purple-100 text-xs text-purple-900 mb-4">
+                            Zaloguj się, aby sfinalizować zamówienie i otrzymać dostęp do materiałów.
+                        </div>
+                        <a href="/api-login/" class="block w-full py-3 bg-brandViolet text-white text-center font-bold rounded-custom shadow hover:bg-purple-800 transition">Zaloguj się / Zarejestruj</a>
+                    </div>
+
+                    <div id="checkout-section" class="hidden">
+                        <div id="user-info-box" class="text-xs text-gray-500 mb-4 font-medium"></div>
+                        
+                        <div id="stripe-container">
+                            <form id="payment-form">
+                                <div id="payment-element" class="mb-4"></div>
+                                <button id="submit-btn" type="submit" class="w-full py-3.5 bg-gradient-to-r from-brandViolet to-brandPink text-white font-bold rounded-custom shadow-md hover:opacity-95 transition disabled:opacity-50">Zapłać teraz</button>
+                                <div id="payment-message" class="text-xs text-red-500 mt-2 hidden font-semibold"></div>
+                            </form>
+                        </div>
+
+                        <div id="free-order-container" class="hidden space-y-3">
+                            <div class="bg-green-50 border border-green-200 p-3 rounded-custom text-xs text-green-800 font-medium">
+                                Twoje zamówienie po uwzględnieniu rabatu jest całkowicie darmowe! Nie musisz podawać karty płatniczej.
+                            </div>
+                            <button type="button" id="free-submit-btn" onclick="processFreeOrder()" class="w-full py-3.5 bg-green-600 hover:bg-green-700 text-white font-bold rounded-custom shadow-md transition">Odbierz za darmo</button>
+                        </div>
                     </div>
                 </div>
             </div>
-
-            <!-- Stan niezalogowany -->
-            <div id="auth-section" class="hidden mt-8 p-4 bg-yellow-50 border border-yellow-200 rounded-xl text-center">
-                <p class="text-sm text-yellow-800 mb-3 font-medium">Musisz być zalogowany, aby przejść do płatności.</p>
-                <a href="/login.html" class="inline-block bg-yellow-600 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-yellow-700 transition">Zaloguj się</a>
-            </div>
-
-            <!-- Stan koszyk pusty lub gotowy do płatności -->
-            <div id="checkout-section" class="mt-8">
-                <!-- Stripe Payment Element Form Container -->
-                <form id="payment-form" class="hidden space-y-4">
-                    <div id="payment-element">
-                        <!-- Stripe Element injects here -->
-                    </div>
-                    <button id="submit-btn" class="w-full bg-black text-white py-3 rounded-xl font-medium hover:bg-gray-800 transition flex justify-center items-center">
-                        <span id="button-text">Zapłać teraz</span>
-                    </button>
-                    <div id="payment-message" class="text-xs text-red-600 text-center hidden"></div>
-                </form>
-
-                <div id="empty-cart-msg" class="text-center text-sm text-gray-400 py-4">
-                    Dodaj produkty do koszyka, aby odblokować płatność.
-                </div>
-            </div>
-        </section>
-
+        </div>
     </main>
 
-    <!-- Skrypt logiki aplikacji koszyka i Stripe -->
-    <script>
-        // Inicjalizacja Stripe (klucz publiczny testowy/produkcyjny)
-        const stripe = Stripe('pk_test_TYooMQauvdEDq54NiTphI7jx'); 
+    <footer class="bg-white border-t border-gray-200 py-8 text-center text-sm text-gray-500">
+        <div class="max-w-6xl mx-auto px-4 space-y-1">
+            <p>© 2026 <b>6WDzienniku</b></p>
+            <p>Wszelkie prawa zastrzeżone.</p>
+        </div>
+    </footer>
 
-        // Stan aplikacji w pamięci przeglądarki
-        let cart = JSON.parse(localStorage.getItem('cart')) || [];
+    <script>
+        const SUPABASE_URL = "https://fxksikgdberwgttvglko.supabase.co";
+        const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ4a3Npa2dkYmVyd2d0dHZnbGtvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA0MzU3NzYsImV4cCI6MjEwNjAxMTc3Nn0.sKf3vvVbaae5-mdg5zwqrgUl6AkXjENanwhDWbH_PXw";
+        const STRIPE_PK = "pk_live_51U9Lv5Q2ih8UDd9IQJ2lVSHCayHb6qrJUN1y8i3za2f6GZNA0sv4H5tBsFcdbyZAOHL3nvJvQCCA76XYtvBow0kL00yLvmCiTI";
+        
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        const stripe = Stripe(STRIPE_PK);
+
+        let elements = null;
         let appliedCouponCode = null;
         let discountPercent = 0;
         let currentTotalValue = 0;
-        let elementsInstance = null;
-        let paymentIntentClientSecret = null;
         let isFetchingIntent = false;
 
-        // Start aplikacji po załadowaniu DOM
-        document.addEventListener('DOMContentLoaded', async () => {
-            await checkUserSession();
-            await validateAndSyncCart();
-            await renderCart();
-        });
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            if (!toast) return;
+            document.getElementById('toast-message').innerText = msg;
+            toast.classList.remove('opacity-0', 'pointer-events-none');
+            toast.classList.add('opacity-100');
+            setTimeout(() => {
+                toast.classList.remove('opacity-100');
+                toast.classList.add('opacity-0', 'pointer-events-none');
+            }, 4000);
+        }
 
-        // Symulacja sprawdzenia sesji użytkownika
-        async function checkUserSession() {
-            const userStatusEl = document.getElementById('user-status');
-            const authSection = document.getElementById('auth-section');
-            const checkoutSection = document.getElementById('checkout-section');
-
-            // Przykład: pobranie informacji o zalogowanym użytkowniku z backendu / Supabase
+        function getCartItems() {
             try {
-                const response = await fetch('/api/user-session');
-                const data = await response.json();
-
-                if (data && data.loggedIn) {
-                    userStatusEl.innerText = `Witaj, ${data.email}`;
-                    authSection.classList.add('hidden');
-                    initCheckout();
-                } else {
-                    userStatusEl.innerText = 'Niezalogowany';
-                    authSection.classList.remove('hidden');
-                    document.getElementById('payment-form').classList.add('hidden');
-                    document.getElementById('empty-cart-msg').classList.add('hidden');
-                }
-            } catch (err) {
-                // Tryb offline / awaryjny dla celów testowych frontendu
-                userStatusEl.innerText = 'Klient (Tryb Lokalny)';
-                authSection.classList.add('hidden');
-                initCheckout();
+                return JSON.parse(localStorage.getItem('cart') || '[]');
+            } catch (e) {
+                console.error("Błąd odczytu koszyka:", e);
+                return [];
             }
         }
 
-        // Walidacja i synchronizacja stanu koszyka (np. ceny z bazą danych)
+        function calculateCartSubtotal() {
+            const cart = getCartItems();
+            return cart.reduce((sum, item) => {
+                const price = parseFloat(item.price) || 0;
+                const qty = parseInt(item.quantity) || 1;
+                return sum + (price * qty);
+            }, 0);
+        }
+
         async function validateAndSyncCart() {
+            let cart = getCartItems();
             if (!cart || cart.length === 0) return;
+
             try {
-                const response = await fetch('/api/validate-cart', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ cart })
-                });
-                if (response.ok) {
-                    const data = await response.json();
-                    if (data.updatedCart) {
-                        cart = data.updatedCart;
-                        localStorage.setItem('cart', JSON.stringify(cart));
+                const productIds = cart.map(item => item.id || item.product_id).filter(Boolean);
+                if (productIds.length === 0) return;
+
+                const { data: dbProducts, error } = await supabaseClient
+                    .from('products')
+                    .select('*')
+                    .in('id', productIds);
+
+                if (error) {
+                    console.error("Błąd walidacji koszyka z bazą:", error);
+                    return;
+                }
+
+                let cartChanged = false;
+                let validCart = [];
+
+                for (let item of cart) {
+                    const itemId = item.id || item.product_id;
+                    const dbProduct = dbProducts ? dbProducts.find(p => p.id == itemId) : null;
+
+                    if (!dbProduct || dbProduct.is_active === false || dbProduct.active === false) {
+                        cartChanged = true;
+                        continue; 
+                    }
+
+                    const dbPrice = parseFloat(dbProduct.price || dbProduct.amount || 0);
+                    const currentItemPrice = parseFloat(item.price || 0);
+
+                    if (dbPrice !== currentItemPrice) {
+                        cartChanged = true;
+                        item.price = dbPrice; 
+                    }
+
+                    if (dbProduct.title) item.title = dbProduct.title;
+                    if (dbProduct.image) item.image = dbProduct.image;
+
+                    validCart.push(item);
+                }
+
+                if (cartChanged) {
+                    localStorage.setItem('cart', JSON.stringify(validCart));
+                    const alertBox = document.getElementById('cart-alert-box');
+                    if (alertBox) {
+                        alertBox.classList.remove('hidden');
                     }
                 }
-            } catch (e) {
-                console.warn('Nie udało się zsynchronizować koszyka z backendem, używam lokalnych danych.');
+            } catch (err) {
+                console.error("Wystąpił błąd podczas walidacji koszyka:", err);
             }
         }
 
-        // Renderowanie widoku koszyka i podsumowania finansowego
         async function renderCart() {
+            await validateAndSyncCart();
+
+            const cart = getCartItems();
             const container = document.getElementById('cart-items-container');
-            
+
+            if (!container) return;
+
             if (!cart || cart.length === 0) {
                 container.innerHTML = '<p class="text-gray-500 font-sans">Twój koszyk jest pusty.</p>';
                 document.getElementById('subtotal-val').innerText = '0.00 PLN';
                 document.getElementById('discount-row').classList.add('hidden');
                 document.getElementById('total-val').innerText = '0.00 PLN';
                 currentTotalValue = 0;
-
-                // Reset kuponu gdy koszyk jest pusty
-                appliedCouponCode = null;
-                discountPercent = 0;
-                document.getElementById('coupon-input-container').classList.remove('hidden');
-                document.getElementById('coupon-applied-badge').classList.add('hidden');
-                document.getElementById('coupon-code').value = '';
-
-                document.getElementById('payment-form').classList.add('hidden');
-                document.getElementById('empty-cart-msg').classList.remove('hidden');
                 return;
             }
 
-            document.getElementById('empty-cart-msg').classList.add('hidden');
-            document.getElementById('payment-form').classList.remove('hidden');
+            const subtotal = calculateCartSubtotal();
+            const discountAmount = (subtotal * discountPercent) / 100;
+            currentTotalValue = Math.max(0, subtotal - discountAmount);
 
-            let html = '';
-            let subtotal = 0;
+            container.innerHTML = cart.map((item, index) => {
+                const price = (parseFloat(item.price) || 0).toFixed(2);
+                const image = item.image || 'https://files-6wdzienniku.vercel.app/content/6wd/logo_favicon_6.svg';
+                const title = item.title || item.name || 'Produkt bez nazwy';
+                const quantity = item.quantity || 1;
 
-            cart.forEach((item, index) => {
-                const itemTotal = (parseFloat(item.price) || 0) * (parseInt(item.quantity) || 1);
-                subtotal += itemTotal;
-                html += `
-                    <div class="flex justify-between items-center p-3 border border-gray-100 rounded-xl bg-gray-50/50">
-                        <div>
-                            <h4 class="font-medium text-sm text-gray-900">${item.name || 'Produkt'}</h4>
-                            <p class="text-xs text-gray-500">${item.price} PLN x ${item.quantity}</p>
+                return `
+                    <div class="bg-white p-4 rounded-custom border border-gray-100 shadow-sm flex items-center justify-between gap-4">
+                        <img src="${image}" alt="${title}" class="w-16 h-16 object-cover rounded-custom">
+                        <div class="flex-grow">
+                            <h3 class="font-bold text-sm text-gray-900">${title}</h3>
+                            <p class="text-xs text-brandViolet font-semibold">${price} PLN</p>
                         </div>
-                        <div class="flex items-center gap-4">
-                            <span class="text-sm font-semibold text-gray-900">${itemTotal.toFixed(2)} PLN</span>
-                            <button onclick="removeItem(${index})" class="text-red-500 hover:text-red-700 text-xs font-medium">Usuń</button>
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs text-gray-500">Ilość: ${quantity}</span>
+                            <button type="button" onclick="removeItem(${index})" class="p-1 text-gray-400 hover:text-red-500 transition" title="Usuń z koszyka">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                            </button>
                         </div>
                     </div>
                 `;
-            });
+            }).join('');
 
-            container.innerHTML = html;
-
-            // Obliczenia finansowe z uwzględnieniem kuponu
             document.getElementById('subtotal-val').innerText = `${subtotal.toFixed(2)} PLN`;
             
-            let discountAmount = 0;
             if (discountPercent > 0) {
-                discountAmount = subtotal * (discountPercent / 100);
                 document.getElementById('discount-row').classList.remove('hidden');
                 document.getElementById('discount-val').innerText = `-${discountAmount.toFixed(2)} PLN`;
             } else {
                 document.getElementById('discount-row').classList.add('hidden');
             }
 
-            currentTotalValue = Math.max(0, subtotal - discountAmount);
             document.getElementById('total-val').innerText = `${currentTotalValue.toFixed(2)} PLN`;
-
-            // Odświeżenie sesji płatniczej Stripe po zmianie wartości koszyka
-            await initCheckout();
         }
 
-        // Usunięcie pojedynczego przedmiotu z koszyka
-        async function removeItem(index) {
-            cart.splice(index, 1);
+        window.removeItem = async function(idx) {
+            let cart = getCartItems();
+            cart.splice(idx, 1);
             localStorage.setItem('cart', JSON.stringify(cart));
             await renderCart();
-        }
+            await initCheckout();
+        };
 
-        // Obsługa kuponów rabatowych
-        async function applyCoupon() {
-            const codeInput = document.getElementById('coupon-code');
-            const code = codeInput.value.trim();
-            if (!code) return;
+        window.applyCoupon = async function() {
+            const errorMsg = document.getElementById('coupon-error-msg');
+            errorMsg.classList.add('hidden'); 
 
-            try {
-                const response = await fetch('/api/verify-coupon', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ code })
-                });
-                const data = await response.json();
-
-                if (response.ok && data.valid) {
-                    appliedCouponCode = code;
-                    discountPercent = data.discountPercent; // np. 10 dla 10%
-                    
-                    document.getElementById('coupon-input-container').classList.add('hidden');
-                    document.getElementById('coupon-applied-badge').classList.remove('hidden');
-                    document.getElementById('applied-coupon-text').innerText = `Kupon ${code} (-${discountPercent}%)`;
-                    
-                    await renderCart();
-                } else {
-                    alert(data.message || 'Niepoprawny kod kuponu.');
-                }
-            } catch (err) {
-                // Tryb demonstracyjny kodu rabatowego
-                if (code.toUpperCase() === 'TEST10') {
-                    appliedCouponCode = code;
-                    discountPercent = 10;
-                    document.getElementById('coupon-input-container').classList.add('hidden');
-                    document.getElementById('coupon-applied-badge').classList.remove('hidden');
-                    document.getElementById('applied-coupon-text').innerText = `Kupon ${code} (-10%)`;
-                    await renderCart();
-                } else {
-                    alert('Błąd weryfikacji kuponu.');
-                }
+            if (appliedCouponCode) {
+                errorMsg.innerText = 'Kupon jest już zastosowany!';
+                errorMsg.classList.remove('hidden');
+                return;
             }
-        }
 
-        function removeCoupon() {
+            const codeInput = document.getElementById('coupon-code');
+            const code = codeInput.value.trim().toUpperCase();
+
+            if (!code) {
+                errorMsg.innerText = 'Wpisz kod rabatowy.';
+                errorMsg.classList.remove('hidden');
+                return;
+            }
+
+            const { data: coupon, error } = await supabaseClient
+                .from('coupons')
+                .select('*')
+                .eq('code', code)
+                .maybeSingle();
+            
+            if (error || !coupon || coupon.active === false || coupon.is_active === false) {
+                errorMsg.innerText = 'Kupon jest nieprawidłowy lub wygasł.';
+                errorMsg.classList.remove('hidden');
+                return;
+            }
+
+            appliedCouponCode = coupon.code;
+            discountPercent = coupon.discount_percent || coupon.discount_value || 0; 
+
+            document.getElementById('coupon-input-container').classList.add('hidden');
+            document.getElementById('coupon-applied-badge').classList.remove('hidden');
+            document.getElementById('applied-code-name').innerText = appliedCouponCode;
+            document.getElementById('applied-code-percent').innerText = discountPercent;
+
+            showToast(`Zastosowano kod! Rabat: ${discountPercent}%`);
+            await renderCart();
+            await initCheckout();
+        };
+
+        window.removeCoupon = async function() {
             appliedCouponCode = null;
             discountPercent = 0;
+
+            const codeInput = document.getElementById('coupon-code');
+            codeInput.value = '';
+            
+            document.getElementById('coupon-error-msg').classList.add('hidden');
             document.getElementById('coupon-input-container').classList.remove('hidden');
             document.getElementById('coupon-applied-badge').classList.add('hidden');
-            document.getElementById('coupon-code').value = '';
-            renderCart();
-        }
 
-        // Inicjalizacja komponentu Stripe Payment Element
+            showToast('Usunięto kod rabatowy.');
+            await renderCart();
+            await initCheckout();
+        };
+
         async function initCheckout() {
-            if (currentTotalValue <= 0 || isFetchingIntent) return;
-            isFetchingIntent = true;
-
+            if (isFetchingIntent) return;
             try {
-                const response = await fetch('/api/create-payment-intent', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ cart, coupon: appliedCouponCode, total: currentTotalValue })
-                });
+                const { data: { session } } = await supabaseClient.auth.getSession();
+                const cart = getCartItems();
+                
+                if (session) {
+                    document.getElementById('auth-section').classList.add('hidden');
+                    document.getElementById('checkout-section').classList.remove('hidden');
+                    document.getElementById('user-info-box').innerText = `Zalogowano jako: ${session.user.email}`;
 
-                const data = await response.json();
-                if (data.clientSecret) {
-                    paymentIntentClientSecret = data.clientSecret;
+                    if (!cart || cart.length === 0) {
+                        document.getElementById('checkout-section').classList.add('hidden');
+                        return;
+                    }
+
+                    if (currentTotalValue <= 0.01) {
+                        document.getElementById('stripe-container').classList.add('hidden');
+                        document.getElementById('free-order-container').classList.remove('hidden');
+                        return;
+                    } else {
+                        document.getElementById('stripe-container').classList.remove('hidden');
+                        document.getElementById('free-order-container').classList.add('hidden');
+                    }
+
+                    isFetchingIntent = true;
+                    const response = await fetch('/api/create-payment-intent', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            items: cart,
+                            userId: session.user.id,
+                            couponCode: appliedCouponCode
+                        })
+                    });
+
+                    let data = {};
+                    const contentType = response.headers.get("content-type");
+                    if (contentType && contentType.includes("application/json")) {
+                        data = await response.json();
+                    }
+
+                    if (!response.ok || !data.clientSecret) {
+                        throw new Error(data.message || data.error || `Błąd serwera (${response.status})`);
+                    }
+
+                    elements = stripe.elements({ 
+                        clientSecret: data.clientSecret,
+                        defaultValues: {
+                            billingDetails: {
+                                email: session.user.email
+                            }
+                        }
+                    });
+
+                    const paymentElement = elements.create('payment', {
+                        fields: {
+                            billingDetails: {
+                                email: 'never' 
+                            }
+                        }
+                    });
                     
-                    const appearance = { theme: 'stripe' };
-                    elementsInstance = stripe.elements({ appearance, clientSecret: paymentIntentClientSecret });
-                    
-                    const paymentElement = elementsInstance.create('payment');
+                    const paymentContainer = document.getElementById('payment-element');
+                    paymentContainer.innerHTML = ''; 
                     paymentElement.mount('#payment-element');
+
+                } else {
+                    document.getElementById('auth-space')?.classList?.remove('hidden'); 
+                    document.getElementById('auth-section').classList.remove('hidden');
+                    document.getElementById('checkout-section').classList.add('hidden');
                 }
             } catch (err) {
-                console.warn('Błąd inicjalizacji płatności Stripe (może wymagać aktywnego backendu):', err);
+                console.error("Błąd checkout:", err);
+                const msg = document.getElementById('payment-message');
+                if (msg) {
+                    msg.innerText = err.message;
+                    msg.classList.remove('hidden');
+                }
             } finally {
                 isFetchingIntent = false;
             }
         }
 
-        // Obsługa wysłania formularza płatności
-        const form = document.getElementById('payment-form');
-        form.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            if (!stripe || !elementsInstance) return;
+        window.processFreeOrder = async function() {
+            const btn = document.getElementById('free-submit-btn');
+            btn.disabled = true;
+            btn.innerText = 'Przetwarzanie...';
 
-            setLoading(true);
+            try {
+                const { data: { session } } = await supabaseClient.auth.getSession();
+                const cart = getCartItems();
+
+                if (!session) {
+                    alert('Musisz być zalogowany.');
+                    btn.disabled = false;
+                    btn.innerText = 'Odbierz za darmo';
+                    return;
+                }
+
+                const response = await fetch('/api/create-free-order', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        items: cart,
+                        userId: session.user.id,
+                        couponCode: appliedCouponCode
+                    })
+                });
+
+                let result = {};
+                const contentType = response.headers.get("content-type");
+                if (contentType && contentType.includes("application/json")) {
+                    result = await response.json();
+                }
+
+                if (!response.ok) {
+                    throw new Error(result.error || result.message || 'Wystąpił błąd podczas finalizacji darmowego zamówienia.');
+                }
+
+                localStorage.removeItem('cart');
+                
+                showToast('Zamówienie zrealizowane pomyślnie!');
+                setTimeout(() => {
+                    window.location.href = '/mojekonto?payment_success=true';
+                }, 1000);
+
+            } catch (err) {
+                console.error("Błąd darmowego zamówienia:", err);
+                alert(err.message || 'Wystąpił nieznany błąd.');
+                btn.disabled = false;
+                btn.innerText = 'Odbierz za darmo';
+            }
+        };
+
+        document.getElementById('payment-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const submitBtn = document.getElementById('submit-btn');
+            const messageDiv = document.getElementById('payment-message');
+            
+            submitBtn.disabled = true;
+            submitBtn.innerText = 'Przetwarzanie płatności...';
+            messageDiv.classList.add('hidden');
+
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            const userEmail = session ? session.user.email : undefined;
 
             const { error } = await stripe.confirmPayment({
-                elements: elementsInstance,
+                elements,
                 confirmParams: {
-                    return_url: window.location.origin + '/success.html',
+                    return_url: window.location.origin + '/mojekonto?payment_success=true',
+                    payment_method_data: {
+                        billing_details: {
+                            email: userEmail
+                        }
+                    }
                 },
             });
 
             if (error) {
-                const messageDiv = document.getElementById('payment-message');
                 messageDiv.innerText = error.message;
                 messageDiv.classList.remove('hidden');
-                setLoading(false);
+                submitBtn.disabled = false;
+                submitBtn.innerText = 'Zapłać teraz';
             }
         });
 
-        function setLoading(isLoading) {
-            const submitBtn = document.getElementById('submit-btn');
-            const buttonText = document.getElementById('button-text');
-            submitBtn.disabled = isLoading;
-            buttonText.innerText = isLoading ? 'Przetwarzanie...' : 'Zapłać teraz';
-        }
+        window.addEventListener('DOMContentLoaded', async () => {
+            await renderCart();
+            await initCheckout();
+        });
     </script>
 </body>
 </html>
