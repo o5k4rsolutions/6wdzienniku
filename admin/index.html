@@ -64,8 +64,12 @@
         <!-- 1. Produkty -->
         <section id="sec-products" class="space-y-6">
             <div class="bg-white p-6 rounded-custom border shadow-sm">
-                <h2 class="text-lg font-condensed mb-4">Dodaj / Edytuj Produkt</h2>
+                <div class="flex justify-between items-center mb-4">
+                    <h2 id="product-form-title" class="text-lg font-condensed">Dodaj Nowy Produkt</h2>
+                    <button type="button" onclick="resetProductForm()" id="cancel-edit-btn" class="text-xs text-gray-500 hover:text-red-600 hidden font-bold">Anuluj edycję</button>
+                </div>
                 <form id="product-form" onsubmit="saveProduct(event)" class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                    <input type="hidden" id="p-edit-id">
                     <input type="text" id="p-title" placeholder="Tytuł produktu" class="p-2.5 border rounded-custom" required>
                     <input type="text" id="p-slug" placeholder="Slug (np. testy-matematyka-klasa-4)" class="p-2.5 border rounded-custom" required>
                     <textarea id="p-desc" placeholder="Opis produktu" class="p-2.5 border rounded-custom sm:col-span-2"></textarea>
@@ -115,7 +119,7 @@
                         <option value="percent">Procentowy (%)</option>
                         <option value="amount">Kwotowy (PLN)</option>
                     </select>
-                    <input type="number" step="0.01" id="c-value" placeholder="Wartość obniżki" class="p-2.5 border rounded-custom" required>
+                    <input type="number" step="0.01" id="c-value" placeholder="Wartość obniżki (np. 20 dla 20% lub 15 dla 15 PLN)" class="p-2.5 border rounded-custom" required>
                     <input type="number" id="c-limit" placeholder="Limit użyć (opcjonalnie)" class="p-2.5 border rounded-custom">
                     <input type="datetime-local" id="c-valid" class="p-2.5 border rounded-custom">
                     <button type="submit" class="sm:col-span-2 py-3 bg-brandPink text-white font-bold rounded-custom hover:opacity-90 transition">Stwórz kod</button>
@@ -149,6 +153,7 @@
         const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ4a3Npa2dkYmVyd2d0dHZnbGtvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA0MzU3NzYsImV4cCI6MjEwNjAxMTc3Nn0.sKf3vvVbaae5-mdg5zwqrgUl6AkXjENanwhDWbH_PXw";
         
         const dbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        let allProductsCache = [];
 
         function showToast(m) {
             const t = document.getElementById('toast');
@@ -215,7 +220,6 @@
             let fileToUpload = null;
             let finalFileName = '';
 
-            // Jeśli wybrano więcej niż 1 plik LUB folder (webkitRelativePath), pakujemy do ZIP
             const hasMultiple = files.length > 1;
             const hasFolder = Array.from(files).some(f => f.webkitRelativePath && f.webkitRelativePath.includes('/'));
 
@@ -271,12 +275,19 @@
             btn.innerText = 'Zapisywanie...';
 
             try {
+                const editId = document.getElementById('p-edit-id').value;
                 const slug = document.getElementById('p-slug').value.trim();
                 const fileInput = document.getElementById('p-file-input');
+                
                 let downloadFiles = [];
+                if (editId) {
+                    const existingProd = allProductsCache.find(p => p.id == editId);
+                    if (existingProd) downloadFiles = existingProd.download_files || [];
+                }
 
                 if (fileInput.files.length > 0) {
-                    downloadFiles = await uploadProductFiles(fileInput.files, slug);
+                    const newFiles = await uploadProductFiles(fileInput.files, slug);
+                    downloadFiles = [...downloadFiles, ...newFiles];
                 }
 
                 const productData = {
@@ -293,38 +304,80 @@
                     download_files: downloadFiles
                 };
 
-                const { error } = await dbClient.from('products').insert(productData);
+                let error;
+                if (editId) {
+                    const res = await dbClient.from('products').update(productData).eq('id', editId);
+                    error = res.error;
+                } else {
+                    const res = await dbClient.from('products').insert(productData);
+                    error = res.error;
+                }
 
                 if (!error) { 
-                    showToast('Produkt dodany pomyślnie!'); 
-                    document.getElementById('product-form').reset();
+                    showToast(editId ? 'Produkt zaktualizowany!' : 'Produkt dodany pomyślnie!'); 
+                    resetProductForm();
                     loadAdminProducts(); 
                 } else {
-                    showToast('Błąd dodawania produktu: ' + error.message);
+                    showToast('Błąd zapisu produktu: ' + error.message);
                 }
             } catch (err) {
                 console.error("Błąd zapisu:", err);
-                showToast('Wystąpił nieoczekiwany błąd podczas wgrywania.');
+                showToast('Wystąpił nieoczekiwany błąd podczas zapisywania.');
             } finally {
                 btn.disabled = false;
                 btn.innerText = 'Zapisz produkt';
             }
         };
 
+        window.resetProductForm = function() {
+            document.getElementById('product-form').reset();
+            document.getElementById('p-edit-id').value = '';
+            document.getElementById('product-form-title').innerText = 'Dodaj Nowy Produkt';
+            document.getElementById('save-product-btn').innerText = 'Zapisz produkt';
+            document.getElementById('cancel-edit-btn').classList.add('hidden');
+        };
+
+        window.editProduct = function(id) {
+            const p = allProductsCache.find(item => item.id == id);
+            if (!p) return;
+
+            document.getElementById('p-edit-id').value = p.id;
+            document.getElementById('p-title').value = p.title || '';
+            document.getElementById('p-slug').value = p.slug || '';
+            document.getElementById('p-desc').value = p.description || '';
+            document.getElementById('p-price').value = p.price || '';
+            document.getElementById('p-price-30').value = p.price_before_30_days || '';
+            document.getElementById('p-is-discount').checked = !!p.is_discounted;
+            document.getElementById('p-discount-price').value = p.discount_price || '';
+            document.getElementById('p-type').value = p.product_type || 'eproduct';
+            document.getElementById('p-category').value = p.category || '';
+            document.getElementById('p-images').value = (p.images || []).join(', ');
+
+            document.getElementById('product-form-title').innerText = 'Edytuj Produkt: ' + p.title;
+            document.getElementById('save-product-btn').innerText = 'Zaktualizuj produkt';
+            document.getElementById('cancel-edit-btn').classList.remove('hidden');
+
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        };
+
         async function loadAdminProducts() {
             try {
                 const { data } = await dbClient.from('products').select('*').order('created_at', { ascending: false });
+                allProductsCache = data || [];
                 const listEl = document.getElementById('admin-products-list');
                 if (!listEl) return;
 
-                listEl.innerHTML = (data || []).map(p => `
+                listEl.innerHTML = allProductsCache.map(p => `
                     <div class="p-3 border rounded-custom flex justify-between items-center text-xs bg-gray-50">
                         <div>
                             <span class="font-bold text-gray-900">${p.title}</span>
-                            <span class="text-gray-400 block">/produkty/${p.id}/${p.slug}</span>
+                            <span class="text-gray-400 block">Cena: ${p.price} PLN ${p.is_discounted ? `(Promocja: ${p.discount_price} PLN)` : ''}</span>
                             <span class="text-purple-600 font-semibold block">Liczba plików: ${(p.download_files || []).length}</span>
                         </div>
-                        <button onclick="deleteProduct('${p.id}')" class="text-red-500 hover:underline font-bold">Usuń</button>
+                        <div class="space-x-2">
+                            <button onclick="editProduct('${p.id}')" class="text-brandViolet hover:underline font-bold">Edytuj</button>
+                            <button onclick="deleteProduct('${p.id}')" class="text-red-500 hover:underline font-bold">Usuń</button>
+                        </div>
                     </div>
                 `).join('');
             } catch (err) {
@@ -435,19 +488,70 @@
                 const listEl = document.getElementById('admin-orders-list');
                 if (!listEl) return;
 
-                listEl.innerHTML = (data || []).map(o => `
-                    <div class="p-3 border rounded-custom text-xs flex justify-between items-center bg-gray-50">
-                        <div>
-                            <span class="font-bold">Zamówienie #${o.order_number || o.id}</span> - ${parseFloat(o.total_amount || 0).toFixed(2)} PLN
-                            <span class="block text-gray-400">${new Date(o.created_at).toLocaleString('pl-PL')}</span>
+                listEl.innerHTML = (data || []).map(o => {
+                    let itemsHtml = '';
+                    try {
+                        let parsedItems = typeof o.items === 'string' ? JSON.parse(o.items) : (o.items || []);
+                        itemsHtml = parsedItems.map(item => `
+                            <div class="text-gray-600 pl-2 border-l-2 border-purple-300 mt-1">
+                                • ${item.title || item.name || 'Produkt'} — ${item.price} PLN (Ilość: ${item.quantity || 1})
+                            </div>
+                        `).join('');
+                    } catch(e) {
+                        itemsHtml = '<div class="text-gray-400 pl-2">Brak szczegółów pozycji</div>';
+                    }
+
+                    const isPaid = o.status === 'paid' || o.status === 'completed';
+
+                    return `
+                        <div class="p-3 border rounded-custom text-xs bg-gray-50 space-y-2">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <span class="font-bold text-gray-900">Zamówienie #${o.order_number || o.id}</span>
+                                    <span class="block text-purple-900 font-semibold mt-0.5">Klient: ${o.customer_name || o.first_name + ' ' + (o.last_name || '') || 'Nieznany'} (${o.customer_email || o.email || 'Brak emaila'})</span>
+                                    <span class="block text-gray-400">Data: ${new Date(o.created_at).toLocaleString('pl-PL')} | Razem: <b>${parseFloat(o.total_amount || 0).toFixed(2)} PLN</b></span>
+                                </div>
+                                <div class="text-right">
+                                    <span class="font-bold uppercase px-2 py-1 rounded text-[10px] ${isPaid ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}">${o.status}</span>
+                                </div>
+                            </div>
+                            <div class="bg-white p-2 rounded border border-gray-100">
+                                <span class="font-bold text-gray-700 block mb-1">Zakupione produkty:</span>
+                                ${itemsHtml}
+                            </div>
+                            <div class="flex justify-end gap-2 pt-1">
+                                ${!isPaid ? `<button onclick="updateOrderStatus('${o.id}', 'paid')" class="bg-green-600 text-white px-3 py-1 rounded font-bold hover:bg-green-700 transition">Oznacz jako opłacone</button>` : ''}
+                                <button onclick="deleteOrder('${o.id}')" class="bg-red-50 text-red-600 px-3 py-1 rounded font-bold hover:bg-red-100 transition">Usuń zamówienie</button>
+                            </div>
                         </div>
-                        <span class="font-bold uppercase ${o.status === 'paid' ? 'text-green-600' : 'text-amber-600'}">${o.status}</span>
-                    </div>
-                `).join('');
+                    `;
+                }).join('');
             } catch (err) {
                 console.error("Błąd pobierania zamówień:", err);
             }
         }
+
+        window.updateOrderStatus = async function(id, newStatus) {
+            if (!confirm('Czy na pewno chcesz oznaczyć to zamówienie jako opłacone? Klient otrzyma dostęp do plików na koncie.')) return;
+            const { error } = await dbClient.from('orders').update({ status: newStatus }).eq('id', id);
+            if (!error) {
+                showToast('Zamówienie oznaczone jako opłacone!');
+                loadAdminOrders();
+            } else {
+                showToast('Błąd aktualizacji statusu: ' + error.message);
+            }
+        };
+
+        window.deleteOrder = async function(id) {
+            if (!confirm('Czy na pewno chcesz usunąć to zamówienie?')) return;
+            const { error } = await dbClient.from('orders').delete().eq('id', id);
+            if (!error) {
+                showToast('Zamówienie zostało usunięte.');
+                loadAdminOrders();
+            } else {
+                showToast('Błąd usuwania: ' + error.message);
+            }
+        };
 
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', checkAdmin);
