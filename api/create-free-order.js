@@ -4,11 +4,10 @@ import { createClient } from '@supabase/supabase-js';
 // aby móc bezpiecznie zapisać zamówienie i nadać uprawnienia omijając Row Level Security (RLS)
 const supabaseAdmin = createClient(
     process.env.SUPABASE_URL || 'https://fxksikgdberwgttvglko.supabase.co',
-    process.env.SUPABASE_SERVICE_ROLE_KEY // Klucz serwisowy MUSI być ustawiony w zmiennych środowiskowych Vercel!
+    process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
 export default async function handler(req, res) {
-    // Obsługujemy tylko metodę POST
     if (req.method !== 'POST') {
         res.setHeader('Allow', 'POST');
         return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
@@ -21,7 +20,7 @@ export default async function handler(req, res) {
             return res.status(400).json({ error: 'Brak wymaganych danych zamówienia.' });
         }
 
-        // 1. Pobieramy profil użytkownika, aby znać jego e-mail (kolumna user_email w tabeli orders)
+        // 1. Pobieramy profil użytkownika, aby znać jego e-mail
         const { data: profileData, error: profileError } = await supabaseAdmin
             .from('profiles')
             .select('email')
@@ -30,14 +29,14 @@ export default async function handler(req, res) {
 
         const userEmail = profileData ? profileData.email : null;
 
-        // 2. Bezpieczne przeliczenie kwoty po stronie serwera na podstawie tabeli products
+        // 2. Bezpieczne przeliczenie kwoty po stronie serwera
         let subtotal = 0;
         const verifiedProducts = [];
 
         for (const item of items) {
             const { data: productData, error: prodError } = await supabaseAdmin
                 .from('products')
-                .select('id, title, price, discount_price, is_discounted, download_files, file_type, download_url')
+                .select('*')
                 .eq('id', item.id)
                 .maybeSingle();
 
@@ -45,7 +44,6 @@ export default async function handler(req, res) {
                 return res.status(400).json({ error: `Produkt o ID ${item.id} nie został znaleziony.` });
             }
 
-            // Sprawdzamy czy produkt ma aktywną cenę promocyjną lub standardową
             const unitPrice = (productData.is_discounted && productData.discount_price !== null) 
                 ? parseFloat(productData.discount_price) 
                 : parseFloat(productData.price);
@@ -63,8 +61,9 @@ export default async function handler(req, res) {
         let finalAmount = subtotal;
         let appliedCouponId = null;
         let discountAmountVal = 0;
+        let couponToUpdate = null;
 
-        // 3. Weryfikacja kuponu rabatowego w tabeli coupons
+        // 3. Weryfikacja kuponu rabatowego
         if (couponCode) {
             const { data: coupon, error: couponError } = await supabaseAdmin
                 .from('coupons')
@@ -72,55 +71,47 @@ export default async function handler(req, res) {
                 .eq('code', couponCode.toUpperCase())
                 .maybeSingle();
 
-            if (coupon) {
-                // Sprawdzamy czy kupon nie wygasł (valid_until) oraz czy ma dostępne użycia
-                const now = new Date();
-                const isValidDate = !coupon.valid_until || new Date(coupon.valid_until) > now;
-                const hasUsageLimit = coupon.usage_limit === null || coupon.used_count < coupon.usage_limit;
-
-                if (isValidDate && hasUsageLimit) {
-                    appliedCouponId = coupon.id;
-                    
-                    // Obsługujemy typ rabatu (procentowy 'percentage' lub kwotowy 'fixed' w zależności od struktury discount_type)
-                    if (coupon.discount_type === 'percentage' || coupon.discount_type === 'percent') {
-                        discountAmountVal = (subtotal * parseFloat(coupon.discount_value)) / 100;
-                    } else {
-                        // Jeśli typ to kwotowy (fixed)
-                        discountAmountVal = parseFloat(coupon.discount_value) || 0;
-                    }
-
-                    finalAmount = Math.max(0, subtotal - discountAmountVal);
-
-                    // Zwiększamy licznik użyć kuponu (used_count)
-                    await supabaseAdmin
-                        .from('coupons')
-                        .update({ used_count: (coupon.used_count || 0) + 1 })
-                        .eq('id', coupon.id);
-                } else {
-                    return res.status(400).json({ error: 'Użyty kupon wygasł lub osiągnął limit użyć.' });
-                }
-            } else {
+            if (couponError || !coupon) {
                 return res.status(400).json({ error: 'Użyty kupon jest nieprawidłowy.' });
             }
+
+            const now = new Date();
+            const isValidDate = !coupon.valid_until || new Date(coupon.valid_until) > now;
+            const hasUsageLimit = coupon.usage_limit === null || coupon.used_count < coupon.usage_limit;
+
+            if (!isValidDate || !hasUsageLimit) {
+                return res.status(400).json({ error: 'Użyty kupon wygasł lub osiągnął limit użyć.' });
+            }
+
+            appliedCouponId = coupon.id;
+            couponToUpdate = coupon;
+
+            if (coupon.discount_type === 'percentage' || coupon.discount_type === 'percent') {
+                discountAmountVal = (subtotal * parseFloat(coupon.discount_value)) / 100;
+            } else {
+                discountAmountVal = parseFloat(coupon.discount_value) || 0;
+            }
+
+            finalAmount = Math.max(0, subtotal - discountAmountVal);
         }
 
-        // 4. Krytyczne zabezpieczenie: upewniamy się, że ostateczna kwota wynosi 0 PLN (lub mniej)
+        // 4. Krytyczne zabezpieczenie: upewniamy się, że ostateczna kwota wynosi 0 PLN
         if (finalAmount > 0.01) {
             return res.status(400).json({ 
                 error: 'To zamówienie nie jest darmowe. Wymagana jest standardowa płatność.' 
             });
         }
 
-        // 5. Zapisanie zamówienia w tabeli `orders` zgodnie z Twoim schematem
+        // 5. Zapisanie zamówienia w tabeli `orders`
         const { data: orderData, error: orderError } = await supabaseAdmin
             .from('orders')
             .insert({
                 user_id: userId,
                 user_email: userEmail,
-                total_amount: 0,
+                total_amount: finalAmount,
                 discount_amount: discountAmountVal,
                 items: verifiedProducts,
-                status: 'paid', // lub 'completed'
+                status: 'paid',
                 coupon_code: couponCode ? couponCode.toUpperCase() : null,
                 coupon_id: appliedCouponId,
                 created_at: new Date().toISOString(),
@@ -136,23 +127,48 @@ export default async function handler(req, res) {
 
         const orderId = orderData.id;
 
-        // 6. Przypisanie dostępu do produktów w tabeli `user_accesses`
-        for (const prod of verifiedProducts) {
-            // Jeśli produkt ma zdefiniowane pliki do pobrania w JSONB (download_files), możemy je przepisać lub zapisać pojedynczo
+        // 6. Aktualizacja licznika użyć kuponu (dopiero po udanym zapisie zamówienia)
+        if (couponToUpdate) {
             await supabaseAdmin
-                .from('user_accesses')
-                .insert({
-                    user_id: userId,
-                    order_id: orderId,
-                    product_id: prod.id,
-                    title: prod.title,
-                    file_type: prod.file_type || null,
-                    download_url: prod.download_url || null,
-                    created_at: new Date().toISOString()
-                });
+                .from('coupons')
+                .update({ used_count: (couponToUpdate.used_count || 0) + 1 })
+                .eq('id', couponToUpdate.id);
         }
 
-        // Zwrócenie odpowiedzi o sukcesie
+        // 7. Przypisanie dostępu do produktów w tabeli `user_accesses` (z uwzględnieniem plików cyfrowych)
+        for (const prod of verifiedProducts) {
+            if (prod.product_type === 'eproduct' && prod.download_files) {
+                const files = typeof prod.download_files === 'string'
+                    ? JSON.parse(prod.download_files)
+                    : prod.download_files;
+
+                for (const file of files) {
+                    await supabaseAdmin.from('user_accesses').insert({
+                        user_id: userId,
+                        order_id: orderId,
+                        product_id: prod.id,
+                        title: file.name || prod.title,
+                        file_type: file.type || 'zip',
+                        download_url: file.url,
+                        created_at: new Date().toISOString()
+                    });
+                }
+            } else {
+                // Awaryjny zapis, jeśli produkt nie korzysta z tablicy download_files
+                await supabaseAdmin
+                    .from('user_accesses')
+                    .insert({
+                        user_id: userId,
+                        order_id: orderId,
+                        product_id: prod.id,
+                        title: prod.title,
+                        file_type: prod.file_type || null,
+                        download_url: prod.download_url || null,
+                        created_at: new Date().toISOString()
+                    });
+            }
+        }
+
         return res.status(200).json({ 
             success: true, 
             message: 'Darmowe zamówienie zostało pomyślnie zrealizowane, a dostępy zostały przyznane.',
