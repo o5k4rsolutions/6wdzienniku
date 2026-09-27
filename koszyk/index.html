@@ -125,7 +125,6 @@
         </div>
     </main>
 
-    <!-- Stopka -->
     <footer class="bg-white border-t border-gray-200 py-8 text-center text-sm text-gray-500">
         <div class="max-w-6xl mx-auto px-4 space-y-1">
             <p>© 2026 <b>6WDzienniku</b></p>
@@ -415,7 +414,7 @@
                     const paymentElement = elements.create('payment', {
                         fields: {
                             billingDetails: {
-                                email: 'never' 
+                                email: 'auto' 
                             }
                         }
                     });
@@ -500,10 +499,18 @@
             submitBtn.innerText = 'Przetwarzanie płatności...';
             messageDiv.classList.add('hidden');
 
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            const userEmail = session ? session.user.email : undefined;
+
             const { error } = await stripe.confirmPayment({
                 elements,
                 confirmParams: {
                     return_url: window.location.origin + '/mojekonto?payment_success=true',
+                    payment_method_data: {
+                        billing_details: {
+                            email: userEmail
+                        }
+                    }
                 },
             });
 
