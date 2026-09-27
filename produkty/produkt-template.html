@@ -30,10 +30,26 @@
         <span id="toast-message" class="text-sm font-medium">Powiadomienie</span>
     </div>
 
-    <header class="w-full bg-white border-b sticky top-0 z-40 py-3">
-        <div class="max-w-7xl mx-auto px-4 flex justify-between items-center">
-            <a href="https://6wdzienniku.vercel.app/"><img src="https://files-6wdzienniku.vercel.app/content/6wd/logo_6wdzienn_kolor.png" class="h-16" alt="6WDzienniku"></a>
-            <a href="/mojekonto" class="text-xs font-bold text-brandViolet border border-brandViolet px-4 py-2 rounded-custom hover:bg-purple-50 transition">Moje Konto</a>
+    <header class="w-full bg-white border-b border-gray-200 sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-4">
+            <a href="https://6wdzienniku.vercel.app/" class="inline-block transition-transform duration-300 hover:scale-105">
+                <img src="https://files-6wdzienniku.vercel.app/content/6wd/logo_6wdzienn_kolor.png" alt="6 w dzienniku Logo" class="h-16 sm:h-20 object-contain">
+            </a>
+
+            <div class="flex items-center gap-3">
+                <a href="/api-login/?login" class="p-2.5 rounded-custom border border-brandViolet text-brandViolet hover:bg-purple-50 transition" title="Logowanie">
+                    <svg class="w-5 h-5 stroke-brandViolet" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                    </svg>
+                </a>
+
+                <a href="/koszyk" class="p-2.5 rounded-custom border border-brandPink text-brandPink hover:bg-pink-50 transition relative" title="Koszyk">
+                    <svg class="w-5 h-5 stroke-brandPink" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path>
+                    </svg>
+                    <span id="cart-badge" class="absolute -top-1.5 -right-1.5 bg-brandPink text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center hidden">0</span>
+                </a>
+            </div>
         </div>
     </header>
 
@@ -89,13 +105,31 @@
             }, 4000);
         }
 
+        function updateCartBadge() {
+            const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+            const badge = document.getElementById('cart-badge');
+            if (!badge) return;
+            const totalCount = cart.reduce((acc, item) => acc + item.quantity, 0);
+            if(totalCount > 0) {
+                badge.innerText = totalCount;
+                badge.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+            }
+        }
+
         async function loadProduct() {
             const urlParams = new URLSearchParams(window.location.search);
             let productId = urlParams.get('id');
 
             if (!productId) {
                 const pathParts = window.location.pathname.split('/').filter(Boolean);
-                productId = pathParts[pathParts.length - 1]; 
+                const produktyIndex = pathParts.indexOf('produkty');
+                if (produktyIndex !== -1 && pathParts[produktyIndex + 1]) {
+                    productId = pathParts[produktyIndex + 1];
+                } else {
+                    productId = pathParts[pathParts.length - 1]; 
+                }
             }
 
             if (!productId || productId === 'produkt' || productId === 'produkt.html') {
@@ -110,7 +144,7 @@
             if (error || !p) {
                 console.error('Błąd pobierania produktu z Supabase:', error);
                 document.getElementById('p-title').innerText = 'Nie znaleziono produktu';
-                document.getElementById('p-desc').innerText = 'Produkt nie istnieje w bazie danych lub wystąpił problem z uprawnieniami (RLS).';
+                document.getElementById('p-desc').innerText = 'Produkt nie istnieje w bazie danych lub wystąpił problem z połączeniem.';
                 document.getElementById('btn-add-cart').style.display = 'none';
                 return;
             }
@@ -118,9 +152,11 @@
             currentProduct = p;
             document.title = `${p.title} - 6WDzienniku`;
             document.getElementById('p-title').innerText = p.title;
-            document.getElementById('p-category').innerText = p.category || 'Produkt cyfrowy';
+            document.getElementById('p-category').innerText = p.category || p.kategoria || 'Produkt cyfrowy';
             document.getElementById('p-desc').innerText = p.description || 'Brak opisu.';
-            document.getElementById('p-img').src = p.images?.[0] || 'https://via.placeholder.com/500';
+            
+            const images = Array.isArray(p.images) && p.images.length > 0 ? p.images : [];
+            document.getElementById('p-img').src = images[0] || 'https://via.placeholder.com/500';
 
             if(p.is_discounted && p.discount_price !== null) {
                 document.getElementById('p-price').innerText = `${parseFloat(p.discount_price).toFixed(2)} PLN`;
@@ -140,17 +176,31 @@
         function addToCart() {
             if(!currentProduct) return;
             let cart = JSON.parse(localStorage.getItem('cart') || '[]');
-            cart.push({ 
-                id: currentProduct.id, 
-                title: currentProduct.title, 
-                price: (currentProduct.is_discounted && currentProduct.discount_price !== null) ? currentProduct.discount_price : currentProduct.price, 
-                quantity: 1 
-            });
+            const existing = cart.find(item => item.id === currentProduct.id);
+            const images = Array.isArray(currentProduct.images) && currentProduct.images.length > 0 ? currentProduct.images : [];
+            const firstImage = images[0] || 'https://via.placeholder.com/300';
+
+            if (existing) {
+                existing.quantity += 1;
+            } else {
+                cart.push({ 
+                    id: currentProduct.id, 
+                    title: currentProduct.title, 
+                    price: (currentProduct.is_discounted && currentProduct.discount_price !== null) ? currentProduct.discount_price : currentProduct.price, 
+                    image: firstImage,
+                    quantity: 1,
+                    slug: currentProduct.slug
+                });
+            }
             localStorage.setItem('cart', JSON.stringify(cart));
+            updateCartBadge();
             showToast('Dodano produkt do koszyka!');
         }
 
-        document.addEventListener('DOMContentLoaded', loadProduct);
+        document.addEventListener('DOMContentLoaded', () => {
+            loadProduct();
+            updateCartBadge();
+        });
     </script>
 </body>
 </html>
