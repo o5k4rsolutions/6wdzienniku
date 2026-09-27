@@ -70,15 +70,21 @@
 
     <main class="flex-grow max-w-7xl mx-auto px-4 sm:px-6 py-10 w-full">
         <div class="text-center mb-10">
-            <h1 class="text-4xl sm:text-5xl font-condensed text-gray-900 tracking-tight">Sklep</h1>
-            <p class="text-gray-600 text-sm sm:text-base mt-2 max-w-xl mx-auto">Wybierz testy, kartkówki i sprawdziany, które pomogą Ci osiągnąć najlepsze wyniki.</p>
+            <h1 id="page-title" class="text-4xl sm:text-5xl font-condensed text-gray-900 tracking-tight">Sklep</h1>
+            <p id="page-subtitle" class="text-gray-600 text-sm sm:text-base mt-2 max-w-xl mx-auto">Wybierz kategorię testów, kartkówek i sprawdzianów.</p>
         </div>
 
-        <div id="categories-container" class="flex flex-wrap items-center justify-center gap-2 mb-8">
+        <div id="back-container" class="mb-6 hidden">
+            <button onclick="selectCategory(null)" class="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-custom text-sm font-semibold text-gray-700 hover:bg-gray-50 transition shadow-sm">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round5" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                </svg>
+                ← Wróć do kategorii
+            </button>
         </div>
 
-        <div id="products-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            <div class="col-span-full text-center py-12 text-gray-400 font-sans">Ładowanie produktów...</div>
+        <div id="store-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div class="col-span-full text-center py-12 text-gray-400 font-sans">Ładowanie...</div>
         </div>
     </main>
 
@@ -96,7 +102,7 @@
         const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         let cachedProducts = [];
-        let currentCategory = 'all';
+        let activeCategory = null; 
 
         function showToast(message) {
             const toast = document.getElementById('toast');
@@ -148,96 +154,112 @@
             showToast(`Dodano do koszyka: ${product.title}`);
         }
 
-        window.filterCategory = function(category) {
-            currentCategory = category;
-            renderCategories();
-            renderProducts();
+        window.selectCategory = function(categoryName) {
+            activeCategory = categoryName;
+            renderView();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         };
 
-        function renderCategories() {
-            const container = document.getElementById('categories-container');
-            if (!container) return;
+        function renderView() {
+            const grid = document.getElementById('store-grid');
+            const titleEl = document.getElementById('page-title');
+            const subtitleEl = document.getElementById('page-subtitle');
+            const backContainer = document.getElementById('back-container');
 
-            const categoryCounts = {};
-            cachedProducts.forEach(p => {
-                const cat = p.category || p.kategoria || 'Inne';
-                categoryCounts[cat] = (categoryCounts[cat] || 0) + 1;
-            });
-
-            const totalCount = cachedProducts.length;
-
-            let html = `
-                <button onclick="filterCategory('all')" class="px-4 py-2 rounded-custom text-xs font-semibold transition ${currentCategory === 'all' ? 'bg-brandViolet text-white shadow' : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50'}">
-                    Wszystkie (${totalCount})
-                </button>
-            `;
-
-            for (const [catName, count] of Object.entries(categoryCounts)) {
-                const isActive = currentCategory === catName;
-                html += `
-                    <button onclick="filterCategory('${catName}')" class="px-4 py-2 rounded-custom text-xs font-semibold transition ${isActive ? 'bg-brandViolet text-white shadow' : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50'}">
-                        ${catName} (${count})
-                    </button>
-                `;
-            }
-
-            container.innerHTML = html;
-        }
-
-        function renderProducts() {
-            const grid = document.getElementById('products-grid');
             if (!grid) return;
 
-            const filteredProducts = currentCategory === 'all' 
-                ? cachedProducts 
-                : cachedProducts.filter(p => (p.category || p.kategoria || 'Inne') === currentCategory);
+            if (!activeCategory) {
+                titleEl.innerText = "Sklep";
+                subtitleEl.innerText = "Wybierz kategorię testów, kartkówek i sprawdzianów.";
+                backContainer.classList.add('hidden');
 
-            if (filteredProducts.length === 0) {
-                grid.innerHTML = '<div class="col-span-full text-center py-12 text-gray-500 font-sans">Brak produktów w tej kategorii.</div>';
-                return;
-            }
+                const categoryMap = {};
+                cachedProducts.forEach(product => {
+                    const cat = product.category || product.kategoria || 'Inne';
+                    if (!categoryMap[cat]) {
+                        categoryMap[cat] = {
+                            count: 0,
+                            image: (Array.isArray(product.images) && product.images.length > 0) ? product.images[0] : 'https://images.unsplash.com/photo-1434030216411-0b793f4b4173?auto=format&fit=crop&w=600&q=80'
+                        };
+                    }
+                    categoryMap[cat].count += 1;
+                });
 
-            grid.innerHTML = filteredProducts.map(product => {
-                const currentPrice = product.is_discounted ? product.discount_price : product.price;
-                const images = Array.isArray(product.images) && product.images.length > 0 ? product.images : [];
-                const firstImage = images[0] || 'https://images.unsplash.com/photo-1434030216411-0b793f4b4173?auto=format&fit=crop&w=600&q=80';
-                const productUrl = `/produkty/${product.id}/${product.slug}`;
+                const categories = Object.keys(categoryMap);
 
-                return `
-                    <div class="bg-white rounded-custom border border-gray-100 shadow-sm overflow-hidden flex flex-col justify-between hover:shadow-md transition">
-                        <a href="${productUrl}">
-                            <img src="${firstImage}" alt="${product.title}" class="w-full h-48 object-cover">
-                        </a>
-                        <div class="p-5 flex-grow flex flex-col justify-between">
-                            <div>
-                                <a href="${productUrl}">
-                                    <h3 class="text-xl font-condensed text-gray-900 hover:text-brandViolet transition">${product.title}</h3>
-                                </a>
-                                <p class="text-xs text-gray-500 mt-1 line-clamp-2">${product.description || ''}</p>
+                if (categories.length === 0) {
+                    grid.innerHTML = '<div class="col-span-full text-center py-12 text-gray-500 font-sans">Brak kategorii do wyświetlenia.</div>';
+                    return;
+                }
+
+                grid.innerHTML = categories.map(cat => {
+                    const catData = categoryMap[cat];
+                    return `
+                        <div onclick="selectCategory('${cat}')" class="bg-white rounded-custom border border-gray-100 shadow-sm overflow-hidden flex flex-col justify-between hover:shadow-md transition cursor-pointer group">
+                            <div class="overflow-hidden">
+                                <img src="${catData.image}" alt="${cat}" class="w-full h-48 object-cover group-hover:scale-105 transition duration-300">
                             </div>
-
-                            <div class="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between">
-                                <div>
-                                    <span class="text-xl font-bold font-condensed text-brandViolet">${parseFloat(currentPrice).toFixed(2)} PLN</span>
-                                    ${product.is_discounted ? `<span class="text-xs text-gray-400 line-through ml-1.5">${parseFloat(product.price).toFixed(2)} PLN</span>` : ''}
-                                </div>
-
-                                <button onclick="addToCartById('${product.id}')" class="btn-sweep px-3.5 py-2 border border-brandPink text-brandPink font-semibold rounded-custom text-xs bg-white">
-                                    <svg class="w-4 h-4 stroke-brandPink mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path>
-                                    </svg>
-                                    <span>Do koszyka</span>
-                                </button>
+                            <div class="p-5 text-center">
+                                <h3 class="text-xl font-condensed text-gray-900 group-hover:text-brandViolet transition">${cat} (${catData.count})</h3>
                             </div>
                         </div>
-                    </div>
-                `;
-            }).join('');
+                    `;
+                }).join('');
+
+            } else {
+                titleEl.innerText = activeCategory;
+                subtitleEl.innerText = `Produkty w kategorii: ${activeCategory}`;
+                backContainer.classList.remove('hidden');
+
+                const filteredProducts = cachedProducts.filter(p => (p.category || p.kategoria || 'Inne') === activeCategory);
+
+                if (filteredProducts.length === 0) {
+                    grid.innerHTML = '<div class="col-span-full text-center py-12 text-gray-500 font-sans">Brak produktów w tej kategorii.</div>';
+                    return;
+                }
+
+                grid.innerHTML = filteredProducts.map(product => {
+                    const currentPrice = product.is_discounted ? product.discount_price : product.price;
+                    const images = Array.isArray(product.images) && product.images.length > 0 ? product.images : [];
+                    const firstImage = images[0] || 'https://images.unsplash.com/photo-1434030216411-0b793f4b4173?auto=format&fit=crop&w=600&q=80';
+                    const productUrl = `/produkty/${product.id}/${product.slug}`;
+
+                    return `
+                        <div class="bg-white rounded-custom border border-gray-100 shadow-sm overflow-hidden flex flex-col justify-between hover:shadow-md transition">
+                            <a href="${productUrl}">
+                                <img src="${firstImage}" alt="${product.title}" class="w-full h-48 object-cover">
+                            </a>
+                            <div class="p-5 flex-grow flex flex-col justify-between">
+                                <div>
+                                    <a href="${productUrl}">
+                                        <h3 class="text-xl font-condensed text-gray-900 hover:text-brandViolet transition">${product.title}</h3>
+                                    </a>
+                                    <p class="text-xs text-gray-500 mt-1 line-clamp-2">${product.description || ''}</p>
+                                </div>
+
+                                <div class="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between">
+                                    <div>
+                                        <span class="text-xl font-bold font-condensed text-brandViolet">${parseFloat(currentPrice).toFixed(2)} PLN</span>
+                                        ${product.is_discounted ? `<span class="text-xs text-gray-400 line-through ml-1.5">${parseFloat(product.price).toFixed(2)} PLN</span>` : ''}
+                                    </div>
+
+                                    <button onclick="addToCartById('${product.id}')" class="btn-sweep px-3.5 py-2 border border-brandPink text-brandPink font-semibold rounded-custom text-xs bg-white">
+                                        <svg class="w-4 h-4 stroke-brandPink mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path>
+                                        </svg>
+                                        <span>Do koszyka</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
         }
 
         async function loadProducts() {
             const { data: products, error } = await supabaseClient.from('products').select('*');
-            const grid = document.getElementById('products-grid');
+            const grid = document.getElementById('store-grid');
 
             if (error || !products || products.length === 0) {
                 grid.innerHTML = '<div class="col-span-full text-center py-12 text-gray-500 font-sans">Brak produktów do wyświetlenia.</div>';
@@ -245,8 +267,7 @@
             }
 
             cachedProducts = products;
-            renderCategories();
-            renderProducts();
+            renderView();
         }
 
         document.addEventListener('DOMContentLoaded', () => {
