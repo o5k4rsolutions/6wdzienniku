@@ -46,7 +46,7 @@ module.exports = async (req, res) => {
       throw new Error('Nie udało się pobrać danych profilu użytkownika.');
     }
 
-    // 2. Obliczenie subtotal
+    // 2. Obliczenie subtotal (weryfikacja cen z bazą danych)
     let subtotal = 0;
     for (const item of items) {
       const { data: product } = await supabase
@@ -80,46 +80,31 @@ module.exports = async (req, res) => {
     const finalAmount = Math.max(0, subtotal - discountAmount);
     const amountInCents = Math.round(finalAmount * 100);
 
-    // 3. Utworzenie zamówienia w bazie
-    const { data: order, error: orderError } = await supabase
-      .from('orders')
-      .insert({
-        user_id: userId,
-        user_email: profile.email,
-        subtotal: subtotal,
-        discount_amount: discountAmount,
-        coupon_id: appliedCouponId,
-        total_amount: finalAmount,
-        status: 'pending',
-        items: JSON.stringify(items)
-      })
-      .select()
-      .single();
-
-    if (orderError) {
-      throw new Error(`Błąd zapisu zamówienia: ${orderError.message}`);
+    // Zabezpieczenie przed płatnością Stripe, jeśli kwota wyszła 0 (od tego jest darmowy endpoint)
+    if (amountInCents <= 0) {
+      return res.status(400).json({ message: 'Kwota zamówienia wynosi 0. Użyj ścieżki darmowego zamówienia.' });
     }
 
-    // 4. Utworzenie PaymentIntent w Stripe (przekazujemy e-mail klienta, co eliminuje pytania o e-mail przy BLIKu/portfelach)
+    // 3. Utworzenie PaymentIntent w Stripe BEZ zapisywania zamówienia w bazie.
+    // Przekazujemy wszystkie dane w metadanych, aby webhook mógł później utworzyć zamówienie.
     const paymentIntent = await stripe.paymentIntents.create({
       amount: amountInCents,
       currency: 'pln',
       automatic_payment_methods: { enabled: true },
-      receipt_email: profile.email, // Automatycznie przypisuje e-mail do płatności
+      receipt_email: profile.email,
       metadata: {
-        orderId: order.id,
-        userId: userId
+        userId: userId,
+        userEmail: profile.email,
+        subtotal: subtotal.toString(),
+        discountAmount: discountAmount.toString(),
+        couponId: appliedCouponId || '',
+        totalAmount: finalAmount.toString(),
+        items: JSON.stringify(items) // Przechowujemy koszyk jako string JSON w metadanych
       }
     });
 
-    await supabase
-      .from('orders')
-      .update({ stripe_payment_intent_id: paymentIntent.id })
-      .eq('id', order.id);
-
     return res.status(200).json({
-      clientSecret: paymentIntent.client_secret,
-      orderId: order.id
+      clientSecret: paymentIntent.client_secret
     });
 
   } catch (error) {
