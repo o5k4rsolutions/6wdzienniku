@@ -37,6 +37,24 @@
         .btn-sweep:hover { transform: scale(1.04); color: #ffffff !important; border-color: transparent !important; }
         .btn-sweep:hover::before { left: 0; }
         .btn-sweep:hover svg { stroke: #ffffff !important; fill: #ffffff !important; }
+
+        /* Dodane animacje ładowania i pojawiania się elementów */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in {
+            animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        @keyframes shimmer {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+        }
+        .skeleton-shimmer {
+            background: linear-gradient(90deg, #f3f4f6 25%, #e5e7eb 50%, #f3f4f6 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+        }
     </style>
 </head>
 <body class="min-h-screen flex flex-col justify-between overflow-x-hidden">
@@ -77,14 +95,37 @@
         <div id="back-container" class="mb-6 hidden">
             <button onclick="selectCategory(null)" class="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-custom text-sm font-semibold text-gray-700 hover:bg-gray-50 transition shadow-sm">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round5" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
                 </svg>
                 Wróć do sklepu
             </button>
         </div>
 
         <div id="store-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            <div class="col-span-full text-center py-12 text-gray-400 font-sans">Ładowanie...</div>
+            <div class="bg-white rounded-custom border border-gray-100 shadow-sm overflow-hidden flex flex-col justify-between">
+                <div class="w-full h-48 skeleton-shimmer"></div>
+                <div class="p-5 flex flex-col gap-3">
+                    <div class="h-6 w-3/4 skeleton-shimmer rounded"></div>
+                    <div class="h-4 w-full skeleton-shimmer rounded"></div>
+                    <div class="h-4 w-5/6 skeleton-shimmer rounded"></div>
+                </div>
+            </div>
+            <div class="bg-white rounded-custom border border-gray-100 shadow-sm overflow-hidden flex flex-col justify-between">
+                <div class="w-full h-48 skeleton-shimmer"></div>
+                <div class="p-5 flex flex-col gap-3">
+                    <div class="h-6 w-3/4 skeleton-shimmer rounded"></div>
+                    <div class="h-4 w-full skeleton-shimmer rounded"></div>
+                    <div class="h-4 w-5/6 skeleton-shimmer rounded"></div>
+                </div>
+            </div>
+            <div class="bg-white rounded-custom border border-gray-100 shadow-sm overflow-hidden flex flex-col justify-between">
+                <div class="w-full h-48 skeleton-shimmer"></div>
+                <div class="p-5 flex flex-col gap-3">
+                    <div class="h-6 w-3/4 skeleton-shimmer rounded"></div>
+                    <div class="h-4 w-full skeleton-shimmer rounded"></div>
+                    <div class="h-4 w-5/6 skeleton-shimmer rounded"></div>
+                </div>
+            </div>
         </div>
     </main>
 
@@ -192,10 +233,11 @@
                     return;
                 }
 
-                grid.innerHTML = categories.map(cat => {
+                grid.innerHTML = categories.map((cat, index) => {
                     const catData = categoryMap[cat];
+                    const delay = index * 0.05;
                     return `
-                        <div onclick="selectCategory('${cat}')" class="bg-white rounded-custom border border-gray-100 shadow-sm overflow-hidden flex flex-col justify-between hover:shadow-md transition cursor-pointer group">
+                        <div onclick="selectCategory('${cat}')" class="bg-white rounded-custom border border-gray-100 shadow-sm overflow-hidden flex flex-col justify-between hover:shadow-md transition cursor-pointer group animate-fade-in" style="animation-delay: ${delay}s">
                             <div class="overflow-hidden">
                                 <img src="${catData.image}" alt="${cat}" class="w-full h-48 object-cover group-hover:scale-105 transition duration-300">
                             </div>
@@ -218,16 +260,17 @@
                     return;
                 }
 
-                grid.innerHTML = filteredProducts.map(product => {
+                grid.innerHTML = filteredProducts.map((product, index) => {
                     const currentPrice = product.is_discounted ? product.discount_price : product.price;
                     const images = Array.isArray(product.images) && product.images.length > 0 ? product.images : [];
                     const firstImage = images[0] || 'https://images.unsplash.com/photo-1434030216411-0b793f4b4173?auto=format&fit=crop&w=600&q=80';
                     const productUrl = `/produkty/${product.id}/${product.slug}`;
+                    const delay = index * 0.05;
 
                     return `
-                        <div class="bg-white rounded-custom border border-gray-100 shadow-sm overflow-hidden flex flex-col justify-between hover:shadow-md transition">
+                        <div class="bg-white rounded-custom border border-gray-100 shadow-sm overflow-hidden flex flex-col justify-between hover:shadow-md transition animate-fade-in" style="animation-delay: ${delay}s">
                             <a href="${productUrl}">
-                                <img src="${firstImage}" alt="${product.title}" class="w-full h-48 object-cover">
+                                <img src="${firstImage}" alt="${product.title}" class="w-full h-48 object-cover hover:opacity-95 transition">
                             </a>
                             <div class="p-5 flex-grow flex flex-col justify-between">
                                 <div>
