@@ -45,6 +45,7 @@
 
     <!-- Main Content Hidden Until Admin Verification -->
     <main id="admin-main" class="flex-grow max-w-7xl mx-auto px-4 sm:px-6 py-8 w-full hidden">
+        <!-- Statystyki / Baner -->
         <div class="bg-purple-900 text-white p-6 rounded-custom shadow-md mb-8 flex flex-col sm:flex-row justify-between items-center gap-4">
             <div>
                 <h1 class="text-2xl font-condensed">Panel Zarządzania</h1>
@@ -54,12 +55,13 @@
 
         <!-- Taby -->
         <div class="flex flex-wrap gap-2 mb-6 border-b pb-3">
-            <button type="button" onclick="switchAdminTab('products')" id="admin-tab-products" class="tab-admin active px-4 py-2 rounded-custom border text-xs font-bold">Produkty</button>
-            <button type="button" onclick="switchAdminTab('coupons')" id="admin-tab-coupons" class="tab-admin px-4 py-2 rounded-custom border text-xs font-bold">Kody Zniżkowe</button>
-            <button type="button" onclick="switchAdminTab('orders')" id="admin-tab-orders" class="tab-admin px-4 py-2 rounded-custom border text-xs font-bold">Zamówienia</button>
-            <button type="button" onclick="switchAdminTab('reviews')" id="admin-tab-reviews" class="tab-admin px-4 py-2 rounded-custom border text-xs font-bold">Opinie</button>
+            <button type="button" onclick="switchAdminTab('products')" id="admin-tab-products" class="tab-admin active px-4 py-2 rounded-custom border text-xs font-bold transition">Produkty</button>
+            <button type="button" onclick="switchAdminTab('coupons')" id="admin-tab-coupons" class="tab-admin px-4 py-2 rounded-custom border text-xs font-bold transition">Kody Zniżkowe</button>
+            <button type="button" onclick="switchAdminTab('orders')" id="admin-tab-orders" class="tab-admin px-4 py-2 rounded-custom border text-xs font-bold transition">Zamówienia</button>
+            <button type="button" onclick="switchAdminTab('reviews')" id="admin-tab-reviews" class="tab-admin px-4 py-2 rounded-custom border text-xs font-bold transition">Opinie</button>
         </div>
 
+        <!-- 1. Produkty -->
         <section id="sec-products" class="space-y-6">
             <div class="bg-white p-6 rounded-custom border shadow-sm">
                 <div class="flex justify-between items-center mb-4">
@@ -106,63 +108,67 @@
             </div>
         </section>
 
+        <!-- 2. Kody Zniżkowe -->
         <section id="sec-coupons" class="space-y-6 hidden">
             <div class="bg-white p-6 rounded-custom border shadow-sm">
-                <h2 id="coupon-form-title" class="text-lg font-condensed mb-4">Dodaj Zaawansowany Kod Zniżkowy</h2>
+                <h2 class="text-lg font-condensed mb-4">Zaawansowany Kreator Kodów Zniżkowych</h2>
                 <form id="coupon-form" onsubmit="saveCoupon(event)" class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-                    <input type="hidden" id="c-edit-id">
-                    
                     <div>
-                        <label class="block font-bold text-gray-700 mb-1">Kod rabatowy *</label>
-                        <input type="text" id="c-code" placeholder="np. LATO2026" class="p-2.5 border rounded-custom uppercase w-full" required>
+                        <label class="block font-bold text-gray-700 mb-1">Kod (np. LATO2026)*</label>
+                        <input type="text" id="c-code" placeholder="LATO2026" class="p-2.5 border rounded-custom uppercase w-full font-bold" required>
                     </div>
-
                     <div>
-                        <label class="block font-bold text-gray-700 mb-1">Typ zniżki *</label>
-                        <select id="c-type" class="p-2.5 border rounded-custom w-full" onchange="toggleCouponMode()">
+                        <label class="block font-bold text-gray-700 mb-1">Typ rabatu*</label>
+                        <select id="c-type" onchange="handleCouponTypeChange()" class="p-2.5 border rounded-custom w-full bg-white">
                             <option value="percent">Procentowy (%)</option>
                             <option value="amount">Kwotowy stały (PLN)</option>
-                            <option value="threshold">Próg kwotowy (np. X zł za każde Y zł wydane)</option>
+                            <option value="threshold_reward">Stopniowy (np. X zł zniżki za każde Y zł wydane)</option>
                         </select>
                     </div>
 
-                    <div>
-                        <label class="block font-bold text-gray-700 mb-1">Wartość zniżki *</label>
-                        <input type="number" step="0.01" id="c-value" placeholder="np. 20 (dla 20% lub 20 PLN)" class="p-2.5 border rounded-custom w-full" required>
+                    <div id="c-value-wrapper">
+                        <label id="c-value-label" class="block font-bold text-gray-700 mb-1">Wartość zniżki (np. 20 dla 20% lub 15 dla 15 PLN)*</label>
+                        <input type="number" step="0.01" id="c-value" placeholder="20" class="p-2.5 border rounded-custom w-full" required>
                     </div>
 
-                    <div id="wrapper-threshold" class="hidden">
-                        <label class="block font-bold text-gray-700 mb-1">Próg wydatków (Minimum PLN do rabatu)</label>
-                        <input type="number" step="0.01" id="c-min-spend" placeholder="np. 100 (dla 10 zł zniżki przy 100 zł)" class="p-2.5 border rounded-custom w-full">
-                    </div>
-
-                    <div>
-                        <label class="block font-bold text-gray-700 mb-1">Minimalna kwota całego zamówienia (opcjonalnie)</label>
-                        <input type="number" step="0.01" id="c-min-order" placeholder="np. 50 PLN" class="p-2.5 border rounded-custom w-full">
-                    </div>
-
-                    <div>
-                        <label class="block font-bold text-gray-700 mb-1">Limit użyć (opcjonalnie)</label>
-                        <input type="number" id="c-limit" placeholder="np. 50 użyć" class="p-2.5 border rounded-custom w-full">
+                    <div id="c-threshold-wrapper" class="hidden sm:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4 bg-purple-50 p-3 rounded-custom border border-purple-200">
+                        <div>
+                            <label class="block font-bold text-purple-900 mb-1">Za każde wydane (kwota bazowa w PLN):</label>
+                            <input type="number" step="0.01" id="c-step-threshold" placeholder="100" class="p-2.5 border rounded-custom w-full bg-white">
+                        </div>
+                        <div>
+                            <label class="block font-bold text-purple-900 mb-1">Przyznaj zniżkę (rabat w PLN):</label>
+                            <input type="number" step="0.01" id="c-step-reward" placeholder="10" class="p-2.5 border rounded-custom w-full bg-white">
+                        </div>
+                        <p class="sm:col-span-2 text-[11px] text-purple-700">Przykład: Jeśli klient wydaje 300 zł, a próg to 100 zł za każde 10 zł zniżki, otrzyma 30 zł rabatu.</p>
                     </div>
 
                     <div>
-                        <label class="block font-bold text-gray-700 mb-1">Ważny do (Data i czas)</label>
+                        <label class="block font-bold text-gray-700 mb-1">Minimalna kwota zamówienia (PLN)</label>
+                        <input type="number" step="0.01" id="c-min-order" placeholder="np. 50.00" class="p-2.5 border rounded-custom w-full">
+                    </div>
+
+                    <div>
+                        <label class="block font-bold text-gray-700 mb-1">Limit użyć (ogólny)</label>
+                        <input type="number" id="c-limit" placeholder="np. 100" class="p-2.5 border rounded-custom w-full">
+                    </div>
+
+                    <div>
+                        <label class="block font-bold text-gray-700 mb-1">Ważny do</label>
                         <input type="datetime-local" id="c-valid" class="p-2.5 border rounded-custom w-full">
                     </div>
 
-                    <div class="sm:col-span-2">
-                        <label class="block font-bold text-gray-700 mb-1">Ograniczenie do konkretnych produktów (opcjonalnie)</label>
-                        <select id="c-product-ids" multiple class="p-2.5 border rounded-custom w-full h-24 bg-gray-50">
-                            <!-- Wypełniane dynamicznie -->
-                        </select>
-                        <p class="text-[11px] text-gray-500 mt-1">Przytrzymaj Ctrl / Cmd, aby wybrać kilka produktów. Zostaw puste, aby kod działał na cały koszyk.</p>
+                    <div>
+                        <label class="block font-bold text-gray-700 mb-1">Dotyczy wybranej kategorii (opcjonalnie)</label>
+                        <input type="text" id="c-category" placeholder="np. Matematyka" class="p-2.5 border rounded-custom w-full">
                     </div>
 
-                    <div class="sm:col-span-2 flex gap-2">
-                        <button type="submit" id="save-coupon-btn" class="flex-1 py-3 bg-brandPink text-white font-bold rounded-custom hover:opacity-90 transition">Stwórz kod</button>
-                        <button type="button" id="cancel-coupon-edit" onclick="resetCouponForm()" class="px-4 py-3 bg-gray-200 text-gray-700 font-bold rounded-custom hidden">Anuluj</button>
+                    <div class="sm:col-span-2">
+                        <label class="block font-bold text-gray-700 mb-1">Dotyczy wybranej listy produktów (ID oddzielone przecinkami, opcjonalnie)</label>
+                        <input type="text" id="c-product-ids" placeholder="np. uuid-1, uuid-2" class="p-2.5 border rounded-custom w-full">
                     </div>
+
+                    <button type="submit" class="sm:col-span-2 py-3 bg-brandPink text-white font-bold rounded-custom hover:opacity-90 transition">Stwórz kod</button>
                 </form>
             </div>
             <div class="bg-white p-6 rounded-custom border shadow-sm">
@@ -171,6 +177,7 @@
             </div>
         </section>
 
+        <!-- 3. Zamówienia -->
         <section id="sec-orders" class="space-y-6 hidden">
             <div class="bg-white p-6 rounded-custom border shadow-sm">
                 <h2 class="text-lg font-condensed mb-4">Wszystkie Zamówienia</h2>
@@ -178,6 +185,7 @@
             </div>
         </section>
 
+        <!-- 4. Opinie -->
         <section id="sec-reviews" class="space-y-6 hidden">
             <div class="bg-white p-6 rounded-custom border shadow-sm">
                 <h2 class="text-lg font-condensed mb-4">Moderacja Opinii</h2>
@@ -188,11 +196,16 @@
 
     <script>
         const SUPABASE_URL = "https://fxksikgdberwgttvglko.supabase.co";
-        const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ4a3Npa2dkYmVyd2d0dHZnbGtvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA0MzU3NzYsImV4cCI6MjEwNjAxltc3Nn0.sKf3vvVbaae5-mdg5zwqrgUl6AkXjENanwhDWbH_PXw";
+        const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ4a3Npa2dkYmVyd2d0dHZnbGtvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA0MzU3NzYsImV4cCI6MjEwNjAxMTc3Nn0.sKf3vvVbaae5-mdg5zwqrgUl6AkXjENanwhDWbH_PXw";
         
-        const dbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        let dbClient;
+        try {
+            dbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        } catch (initErr) {
+            console.error("Błąd inicjalizacji klienta Supabase:", initErr);
+        }
+
         let allProductsCache = [];
-        let allCouponsCache = [];
 
         function showToast(m) {
             const t = document.getElementById('toast');
@@ -213,19 +226,38 @@
             const targetTab = document.getElementById(`admin-tab-${name}`);
             if (targetSec) targetSec.classList.remove('hidden');
             if (targetTab) targetTab.classList.add('active');
-        }
+        };
 
-        window.toggleCouponMode = function() {
+        window.handleCouponTypeChange = function() {
             const type = document.getElementById('c-type').value;
-            const thresholdWrapper = document.getElementById('wrapper-threshold');
-            if (type === 'threshold') {
+            const thresholdWrapper = document.getElementById('c-threshold-wrapper');
+            const valueWrapper = document.getElementById('c-value-wrapper');
+            const valueInput = document.getElementById('c-value');
+            const valueLabel = document.getElementById('c-value-label');
+
+            if (type === 'threshold_reward') {
                 thresholdWrapper.classList.remove('hidden');
+                valueWrapper.classList.add('hidden');
+                valueInput.required = false;
             } else {
                 thresholdWrapper.classList.add('hidden');
+                valueWrapper.classList.remove('hidden');
+                valueInput.required = true;
+                if (type === 'percent') {
+                    valueLabel.innerText = 'Wartość zniżki w % (np. 20)';
+                    valueInput.placeholder = '20';
+                } else if (type === 'amount') {
+                    valueLabel.innerText = 'Wartość zniżki w PLN (np. 15)';
+                    valueInput.placeholder = '15';
+                }
             }
-        }
+        };
 
         async function checkAdmin() {
+            if (!dbClient) {
+                alert("Błąd krytyczny: Brak połączenia z bazą danych.");
+                return;
+            }
             try {
                 const { data: { session }, error: sessionError } = await dbClient.auth.getSession();
                 
@@ -241,7 +273,8 @@
                     .maybeSingle();
 
                 if (profileError || profile?.role !== 'admin') {
-                    console.warn('Brak uprawnień administratora.');
+                    // Safe custom modal/toast notice instead of alert() if preferred, but alert is acceptable for hard auth redirect protection
+                    alert('Brak uprawnień administratora.');
                     window.location.href = '/mojekonto';
                     return;
                 }
@@ -249,7 +282,7 @@
                 const mainEl = document.getElementById('admin-main');
                 if (mainEl) mainEl.classList.remove('hidden');
 
-                await loadAdminProducts();
+                loadAdminProducts();
                 loadAdminCoupons();
                 loadAdminOrders();
                 loadAdminReviews();
@@ -365,7 +398,7 @@
                 if (!error) { 
                     showToast(editId ? 'Produkt zaktualizowany!' : 'Produkt dodany pomyślnie!'); 
                     resetProductForm();
-                    await loadAdminProducts(); 
+                    loadAdminProducts(); 
                 } else {
                     showToast('Błąd zapisu produktu: ' + error.message);
                 }
@@ -413,12 +446,6 @@
             try {
                 const { data } = await dbClient.from('products').select('*').order('created_at', { ascending: false });
                 allProductsCache = data || [];
-                
-                const prodSelect = document.getElementById('c-product-ids');
-                if (prodSelect) {
-                    prodSelect.innerHTML = allProductsCache.map(p => `<option value="${p.id}">${p.title} (${p.price} PLN)</option>`).join('');
-                }
-
                 const listEl = document.getElementById('admin-products-list');
                 if (!listEl) return;
 
@@ -427,6 +454,7 @@
                         <div>
                             <span class="font-bold text-gray-900">${p.title}</span>
                             <span class="text-gray-400 block">Cena: ${p.price} PLN ${p.is_discounted ? `(Promocja: ${p.discount_price} PLN)` : ''}</span>
+                            <span class="text-purple-600 font-semibold block">ID: ${p.id}</span>
                             <span class="text-purple-600 font-semibold block">Liczba plików: ${(p.download_files || []).length}</span>
                         </div>
                         <div class="space-x-2">
@@ -441,6 +469,7 @@
         }
 
         window.deleteProduct = async function(id) {
+            if (!window.confirm('Czy na pewno chcesz usunąć ten produkt?')) return;
             await dbClient.from('products').delete().eq('id', id);
             showToast('Produkt usunięty.');
             loadAdminProducts();
@@ -449,112 +478,78 @@
         window.saveCoupon = async function(e) {
             e.preventDefault();
             try {
-                const editId = document.getElementById('c-edit-id').value;
-                const productSelect = document.getElementById('c-product-ids');
-                const selectedProducts = Array.from(productSelect.selectedOptions).map(opt => opt.value);
+                const type = document.getElementById('c-type').value;
+                let value = null;
+                let minOrder = parseFloat(document.getElementById('c-min-order').value) || null;
+                let stepThreshold = null;
+                let stepReward = null;
+
+                if (type === 'threshold_reward') {
+                    stepThreshold = parseFloat(document.getElementById('c-step-threshold').value);
+                    stepReward = parseFloat(document.getElementById('c-step-reward').value);
+                    if (!stepThreshold || !stepReward) {
+                        showToast('Podaj poprawny próg i kwotę zniżki dla kodu stopniowego.');
+                        return;
+                    }
+                } else {
+                    value = parseFloat(document.getElementById('c-value').value);
+                }
+
+                const productIdsRaw = document.getElementById('c-product-ids').value.trim();
+                const productIds = productIdsRaw ? productIdsRaw.split(',').map(s => s.trim()).filter(Boolean) : [];
 
                 const couponData = {
                     code: document.getElementById('c-code').value.toUpperCase().trim(),
-                    discount_type: document.getElementById('c-type').value,
-                    discount_value: parseFloat(document.getElementById('c-value').value),
-                    min_spend: parseFloat(document.getElementById('c-min-spend').value || 0),
-                    min_order_amount: parseFloat(document.getElementById('c-min-order').value || 0),
+                    discount_type: type,
+                    discount_value: value,
+                    min_order_amount: minOrder,
+                    step_threshold: stepThreshold,
+                    step_reward: stepReward,
+                    category_restriction: document.getElementById('c-category').value.trim() || null,
+                    product_ids: productIds.length > 0 ? productIds : null,
                     usage_limit: document.getElementById('c-limit').value ? parseInt(document.getElementById('c-limit').value) : null,
-                    valid_until: document.getElementById('c-valid').value || null,
-                    applicable_product_ids: selectedProducts.length > 0 ? selectedProducts : null
+                    valid_until: document.getElementById('c-valid').value || null
                 };
 
-                let error;
-                if (editId) {
-                    const res = await dbClient.from('coupons').update(couponData).eq('id', editId);
-                    error = res.error;
-                } else {
-                    const res = await dbClient.from('coupons').insert(couponData);
-                    error = res.error;
-                }
-
+                const { error } = await dbClient.from('coupons').insert(couponData);
                 if (!error) {
-                    showToast(editId ? 'Kod rabatowy zaktualizowany!' : 'Kod rabatowy został utworzony!');
-                    resetCouponForm();
+                    showToast('Zaawansowany kod rabatowy został utworzony!');
+                    document.getElementById('coupon-form').reset();
+                    handleCouponTypeChange();
                     loadAdminCoupons();
                 } else {
                     showToast('Błąd podczas zapisywania kodu: ' + error.message);
                 }
             } catch (err) {
                 console.error("Błąd podczas zapisywania kodu:", err);
-                showToast('Wystąpił błąd krytyczny przy zapisie kodu.');
+                showToast('Wystąpił błąd podczas zapisywania kodu zniżkowego.');
             }
-        };
-
-        window.resetCouponForm = function() {
-            document.getElementById('coupon-form').reset();
-            document.getElementById('c-edit-id').value = '';
-            document.getElementById('coupon-form-title').innerText = 'Dodaj Zaawansowany Kod Zniżkowy';
-            document.getElementById('save-coupon-btn').innerText = 'Stwórz kod';
-            document.getElementById('cancel-coupon-edit').classList.add('hidden');
-            toggleCouponMode();
-        };
-
-        window.editCoupon = function(id) {
-            const c = allCouponsCache.find(item => item.id == id);
-            if (!c) return;
-
-            document.getElementById('c-edit-id').value = c.id;
-            document.getElementById('c-code').value = c.code || '';
-            document.getElementById('c-type').value = c.discount_type || 'percent';
-            document.getElementById('c-value').value = c.discount_value || '';
-            document.getElementById('c-min-spend').value = c.min_spend || '';
-            document.getElementById('c-min-order').value = c.min_order_amount || '';
-            document.getElementById('c-limit').value = c.usage_limit || '';
-            
-            if (c.valid_until) {
-                const dt = new Date(c.valid_until);
-                document.getElementById('c-valid').value = dt.toISOString().slice(0, 16);
-            } else {
-                document.getElementById('c-valid').value = '';
-            }
-
-            const productSelect = document.getElementById('c-product-ids');
-            if (c.applicable_product_ids && Array.isArray(c.applicable_product_ids)) {
-                Array.from(productSelect.options).forEach(opt => {
-                    opt.selected = c.applicable_product_ids.includes(opt.value);
-                });
-            } else {
-                Array.from(productSelect.options).forEach(opt => opt.selected = false);
-            }
-
-            toggleCouponMode();
-            document.getElementById('coupon-form-title').innerText = 'Edytuj Kod: ' + c.code;
-            document.getElementById('save-coupon-btn').innerText = 'Zaktualizuj kod';
-            document.getElementById('cancel-coupon-edit').classList.remove('hidden');
-            window.scrollTo({ top: 0, behavior: 'smooth' });
         };
 
         async function loadAdminCoupons() {
             try {
                 const { data } = await dbClient.from('coupons').select('*').order('created_at', { ascending: false });
-                allCouponsCache = data || [];
                 const listEl = document.getElementById('admin-coupons-list');
                 if (!listEl) return;
 
-                listEl.innerHTML = allCouponsCache.map(c => {
-                    let desc = `${c.discount_value} ${c.discount_type === 'percent' ? '%' : (c.discount_type === 'amount' ? 'PLN' : 'PLN próg')}`;
-                    if (c.min_spend > 0) desc += ` (Min. wydatki na prod: ${c.min_spend} zł)`;
-                    if (c.min_order_amount > 0) desc += ` (Min. zamówienie: ${c.min_order_amount} zł)`;
-                    if (c.applicable_product_ids && c.applicable_product_ids.length > 0) {
-                        desc += ` — Wybrane produkty (${c.applicable_product_ids.length})`;
-                    }
+                listEl.innerHTML = (data || []).map(c => {
+                    let desc = '';
+                    if (c.discount_type === 'percent') desc = `${c.discount_value}%`;
+                    else if (c.discount_type === 'amount') desc = `${c.discount_value} PLN`;
+                    else if (c.discount_type === 'threshold_reward') desc = `${c.step_reward || 0} zł zniżki za każde ${c.step_threshold || 0} zł`;
 
                     return `
                         <div class="p-3 border rounded-custom text-xs flex justify-between items-center bg-gray-50">
                             <div>
-                                <span class="font-bold text-brandViolet text-sm">${c.code}</span> — ${desc}
-                                <span class="block text-gray-400 mt-0.5">Wygasa: ${c.valid_until ? new Date(c.valid_until).toLocaleString('pl-PL') : 'Bez limitu'} | Użycia: ${c.times_used || 0} ${c.usage_limit ? `/ ${c.usage_limit}` : ''}</span>
+                                <span class="font-bold text-brandViolet text-sm">${c.code}</span> — <span class="font-semibold text-gray-700">${desc}</span>
+                                <div class="text-gray-500 mt-0.5 space-x-2">
+                                    ${c.min_order_amount ? `<span>Min. zamówienie: <b>${c.min_order_amount} PLN</b></span>` : ''}
+                                    ${c.category_restriction ? `<span>Kat: <b>${c.category_restriction}</b></span>` : ''}
+                                    ${c.product_ids ? `<span>Wybrane produkty (ID)</span>` : ''}
+                                    <span>Wygaśnie: ${c.valid_until ? new Date(c.valid_until).toLocaleString('pl-PL') : 'Bez limitu'}</span>
+                                </div>
                             </div>
-                            <div class="space-x-2">
-                                <button type="button" onclick="editCoupon('${c.id}')" class="text-brandViolet font-bold">Edytuj</button>
-                                <button type="button" onclick="deleteCoupon('${c.id}')" class="text-red-500 font-bold">Usuń</button>
-                            </div>
+                            <button type="button" onclick="deleteCoupon('${c.id}')" class="text-red-500 font-bold hover:underline">Usuń</button>
                         </div>
                     `;
                 }).join('');
@@ -584,11 +579,11 @@
                     <div class="p-3 border rounded-custom text-xs flex justify-between items-center bg-gray-50">
                         <div>
                             <span class="font-bold text-gray-800">${r.author_name || 'Anonim'}</span> (${r.rating}★): ${r.comment}
-                            <span class="block text-gray-400">Status: <b class="uppercase">${r.status}</b></span>
+                            <span class="block text-gray-400 mt-0.5">Status: <b class="uppercase">${r.status}</b></span>
                         </div>
                         <div class="space-x-2">
-                            ${r.status !== 'approved' ? `<button type="button" onclick="approveReview('${r.id}')" class="text-green-600 font-bold">Zatwierdź</button>` : ''}
-                            <button type="button" onclick="deleteReview('${r.id}')" class="text-red-600 font-bold">Usuń</button>
+                            ${r.status !== 'approved' ? `<button type="button" onclick="approveReview('${r.id}')" class="text-green-600 font-bold hover:underline">Zatwierdź</button>` : ''}
+                            <button type="button" onclick="deleteReview('${r.id}')" class="text-red-600 font-bold hover:underline">Usuń</button>
                         </div>
                     </div>
                 `).join('');
@@ -670,6 +665,7 @@
         }
 
         window.updateOrderStatus = async function(id, newStatus) {
+            if (!window.confirm('Czy na pewno chcesz oznaczyć to zamówienie jako opłacone? Klient otrzyma dostęp do plików na koncie.')) return;
             const { error } = await dbClient.from('orders').update({ status: newStatus }).eq('id', id);
             if (!error) {
                 showToast('Zamówienie oznaczone jako opłacone!');
@@ -680,6 +676,7 @@
         };
 
         window.deleteOrder = async function(id) {
+            if (!window.confirm('Czy na pewno chcesz usunąć to zamówienie?')) return;
             const { error } = await dbClient.from('orders').delete().eq('id', id);
             if (!error) {
                 showToast('Zamówienie zostało usunięte.');
