@@ -75,7 +75,7 @@
                             <svg class="w-4 h-4 fill-current" viewBox="0 0 20 20">
                                 <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
                             </svg>
-                            <span>Aktywny kod: <b id="applied-code-name" class="uppercase"></b> (-<span id="applied-code-percent">0</span>%)</span>
+                            <span>Aktywny kod: <b id="applied-code-name" class="uppercase"></b> (<span id="applied-code-desc">rabat</span>)</span>
                         </div>
                         <button type="button" onclick="removeCoupon()" class="text-red-500 hover:underline font-semibold">Usuń</button>
                     </div>
@@ -141,10 +141,9 @@
         const stripe = Stripe(STRIPE_PK);
 
         let elements = null;
-        let appliedCouponCode = null;
-        let discountPercent = 0;
-        let activeCouponMinAmount = 0;
+        let activeCoupon = null; 
         let currentTotalValue = 0;
+        let currentDiscountValue = 0;
         let isFetchingIntent = false;
 
         function showToast(msg) {
@@ -208,11 +207,11 @@
                     const standardPrice = parseFloat(dbProduct.price || dbProduct.amount || 0);
                     const isDisc = dbProduct.is_discounted === true;
                     const discPrice = (dbProduct.discount_price !== null && dbProduct.discount_price !== undefined) ? parseFloat(dbProduct.discount_price) : null;
-                    const effectivePrice = (isDisc && discPrice !== null && !isNaN(discPrice)) ? discPrice : standardPrice;
 
                     item.price = standardPrice;
                     item.is_discounted = isDisc;
                     item.discount_price = discPrice;
+                    item.category = dbProduct.category || '';
 
                     if (dbProduct.title) item.title = dbProduct.title;
                     if (dbProduct.image) item.image = dbProduct.image || (dbProduct.images && dbProduct.images[0]);
@@ -230,6 +229,49 @@
             } catch (err) {}
         }
 
+        function calculateDiscount(subtotal, coupon, cart) {
+            if (!coupon) return 0;
+
+            const type = coupon.discount_type;
+            
+            if (type === 'percent') {
+                const val = parseFloat(coupon.discount_value || 0);
+                return (subtotal * val) / 100;
+            } 
+            else if (type === 'amount') {
+                const val = parseFloat(coupon.discount_value || 0);
+                return Math.min(subtotal, val);
+            } 
+            else if (type === 'threshold_reward') {
+                const threshold = parseFloat(coupon.step_threshold || 0);
+                const reward = parseFloat(coupon.step_reward || 0);
+                if (threshold <= 0 || reward <= 0) return 0;
+                
+                let eligibleSubtotal = subtotal;
+                if (coupon.category_restriction || (coupon.product_ids && coupon.product_ids.length > 0)) {
+                    eligibleSubtotal = cart.reduce((sum, item) => {
+                        const itemPrice = (item.discount_price !== null && item.discount_price !== undefined && item.discount_price !== '') 
+                            ? parseFloat(item.discount_price) 
+                            : (parseFloat(item.price) || 0);
+                        const itemQty = parseInt(item.quantity) || 1;
+                        
+                        let matches = true;
+                        if (coupon.category_restriction && item.category !== coupon.category_restriction) {
+                            matches = false;
+                        }
+                        if (coupon.product_ids && coupon.product_ids.length > 0 && !coupon.product_ids.includes(String(item.id || item.product_id))) {
+                            matches = false;
+                        }
+                        return matches ? sum + (itemPrice * itemQty) : sum;
+                    }, 0);
+                }
+
+                const multiplier = Math.floor(eligibleSubtotal / threshold);
+                return multiplier * reward;
+            }
+            return 0;
+        }
+
         async function renderCart() {
             await validateAndSyncCart();
 
@@ -244,7 +286,8 @@
                 document.getElementById('discount-row').classList.add('hidden');
                 document.getElementById('total-val').innerText = '0.00 PLN';
                 currentTotalValue = 0;
-                if (appliedCouponCode) {
+                currentDiscountValue = 0;
+                if (activeCoupon) {
                     removeCoupon();
                 }
                 return;
@@ -252,17 +295,20 @@
 
             const subtotal = calculateCartSubtotal();
 
-            if (appliedCouponCode && subtotal < activeCouponMinAmount) {
-                removeCoupon();
-                const errorMsg = document.getElementById('coupon-error-msg');
-                if (errorMsg) {
-                    errorMsg.innerText = 'Brak wystarczających wymagań w twoim koszyku dla kodu rabatowego';
-                    errorMsg.classList.remove('hidden');
+            if (activeCoupon) {
+                const minOrder = parseFloat(activeCoupon.min_order_amount || 0);
+                if (subtotal < minOrder) {
+                    removeCoupon();
+                    const errorMsg = document.getElementById('coupon-error-msg');
+                    if (errorMsg) {
+                        errorMsg.innerText = 'Wartość koszyka spadła poniżej minimum wymaganego dla tego kodu.';
+                        errorMsg.classList.remove('hidden');
+                    }
                 }
             }
 
-            const discountAmount = (subtotal * discountPercent) / 100;
-            currentTotalValue = Math.max(0, subtotal - discountAmount);
+            currentDiscountValue = calculateDiscount(subtotal, activeCoupon, cart);
+            currentTotalValue = Math.max(0, subtotal - currentDiscountValue);
 
             container.innerHTML = cart.map((item, index) => {
                 const standardPrice = parseFloat(item.price) || 0;
@@ -301,9 +347,9 @@
 
             document.getElementById('subtotal-val').innerText = `${subtotal.toFixed(2)} PLN`;
             
-            if (discountPercent > 0) {
+            if (currentDiscountValue > 0) {
                 document.getElementById('discount-row').classList.remove('hidden');
-                document.getElementById('discount-val').innerText = `-${discountAmount.toFixed(2)} PLN`;
+                document.getElementById('discount-val').innerText = `-${currentDiscountValue.toFixed(2)} PLN`;
             } else {
                 document.getElementById('discount-row').classList.add('hidden');
             }
@@ -323,7 +369,7 @@
             const errorMsg = document.getElementById('coupon-error-msg');
             errorMsg.classList.add('hidden'); 
 
-            if (appliedCouponCode) {
+            if (activeCoupon) {
                 errorMsg.innerText = 'Kupon jest już zastosowany!';
                 errorMsg.classList.remove('hidden');
                 return;
@@ -344,39 +390,47 @@
                 .eq('code', code)
                 .maybeSingle();
             
-            if (error || !coupon || coupon.active === false || coupon.is_active === false) {
-                errorMsg.innerText = 'Kupon jest nieprawidłowy lub wygasł.';
+            if (error || !coupon) {
+                errorMsg.innerText = 'Kupon jest nieprawidłowy lub nie istnieje.';
+                errorMsg.classList.remove('hidden');
+                return;
+            }
+
+            // Check expiration
+            if (coupon.valid_until && new Date(coupon.valid_until) < new Date()) {
+                errorMsg.innerText = 'Ten kod rabatowy wygasł.';
                 errorMsg.classList.remove('hidden');
                 return;
             }
 
             const subtotal = calculateCartSubtotal();
-            const minAmount = parseFloat(coupon.min_order_amount || coupon.minimum_amount || 0);
+            const minAmount = parseFloat(coupon.min_order_amount || 0);
 
-            if (subtotal < minAmount) {
-                errorMsg.innerText = 'Brak wystarczających wymagań w twoim koszyku dla kodu rabatowego';
+            if (minAmount > 0 && subtotal < minAmount) {
+                errorMsg.innerText = `Minimalna kwota zamówienia dla tego kodu to ${minAmount} PLN.`;
                 errorMsg.classList.remove('hidden');
                 return;
             }
 
-            appliedCouponCode = coupon.code;
-            discountPercent = parseFloat(coupon.discount_percent || coupon.discount_value || 0); 
-            activeCouponMinAmount = minAmount;
+            activeCoupon = coupon;
+
+            let descText = '';
+            if (coupon.discount_type === 'percent') descText = `${coupon.discount_value}%`;
+            else if (coupon.discount_type === 'amount') descText = `${coupon.discount_value} PLN`;
+            else if (coupon.discount_type === 'threshold_reward') descText = `${coupon.step_reward} zł za każde ${coupon.step_threshold} zł`;
 
             document.getElementById('coupon-input-container').classList.add('hidden');
             document.getElementById('coupon-applied-badge').classList.remove('hidden');
-            document.getElementById('applied-code-name').innerText = appliedCouponCode;
-            document.getElementById('applied-code-percent').innerText = discountPercent;
+            document.getElementById('applied-code-name').innerText = activeCoupon.code;
+            document.getElementById('applied-code-desc').innerText = descText;
 
-            showToast(`Zastosowano kod! Rabat: ${discountPercent}%`);
+            showToast(`Zastosowano kod rabatowy!`);
             await renderCart();
             await initCheckout();
         };
 
         window.removeCoupon = async function() {
-            appliedCouponCode = null;
-            discountPercent = 0;
-            activeCouponMinAmount = 0;
+            activeCoupon = null;
 
             const codeInput = document.getElementById('coupon-code');
             if (codeInput) codeInput.value = '';
@@ -422,7 +476,8 @@
                         body: JSON.stringify({
                             items: cart,
                             userId: session.user.id,
-                            couponCode: appliedCouponCode
+                            couponCode: activeCoupon ? activeCoupon.code : null,
+                            discountAmount: currentDiscountValue
                         })
                     });
 
@@ -493,7 +548,8 @@
                     body: JSON.stringify({
                         items: cart,
                         userId: session.user.id,
-                        couponCode: appliedCouponCode
+                        couponCode: activeCoupon ? activeCoupon.code : null,
+                        discountAmount: currentDiscountValue
                     })
                 });
 
@@ -541,7 +597,7 @@
                             email: userEmail
                         }
                     }
-                },
+                }
             });
 
             if (error) {
@@ -552,7 +608,7 @@
             }
         });
 
-        window.addEventListener('DOMContentLoaded', async () => {
+        document.addEventListener('DOMContentLoaded', async () => {
             await renderCart();
             await initCheckout();
         });
