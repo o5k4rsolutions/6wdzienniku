@@ -143,6 +143,7 @@
         let elements = null;
         let appliedCouponCode = null;
         let discountPercent = 0;
+        let activeCouponMinAmount = 0;
         let currentTotalValue = 0;
         let isFetchingIntent = false;
 
@@ -162,7 +163,6 @@
             try {
                 return JSON.parse(localStorage.getItem('cart') || '[]');
             } catch (e) {
-                console.error("Błąd odczytu koszyka:", e);
                 return [];
             }
         }
@@ -170,7 +170,9 @@
         function calculateCartSubtotal() {
             const cart = getCartItems();
             return cart.reduce((sum, item) => {
-                const price = parseFloat(item.price) || 0;
+                const price = (item.discount_price !== null && item.discount_price !== undefined && item.discount_price !== '') 
+                    ? parseFloat(item.discount_price) 
+                    : (parseFloat(item.price) || 0);
                 const qty = parseInt(item.quantity) || 1;
                 return sum + (price * qty);
             }, 0);
@@ -189,10 +191,7 @@
                     .select('*')
                     .in('id', productIds);
 
-                if (error) {
-                    console.error("Błąd walidacji koszyka z bazą:", error);
-                    return;
-                }
+                if (error) return;
 
                 let cartChanged = false;
                 let validCart = [];
@@ -206,16 +205,17 @@
                         continue; 
                     }
 
-                    const dbPrice = parseFloat(dbProduct.price || dbProduct.amount || 0);
-                    const currentItemPrice = parseFloat(item.price || 0);
+                    const standardPrice = parseFloat(dbProduct.price || dbProduct.amount || 0);
+                    const isDisc = dbProduct.is_discounted === true;
+                    const discPrice = (dbProduct.discount_price !== null && dbProduct.discount_price !== undefined) ? parseFloat(dbProduct.discount_price) : null;
+                    const effectivePrice = (isDisc && discPrice !== null && !isNaN(discPrice)) ? discPrice : standardPrice;
 
-                    if (dbPrice !== currentItemPrice) {
-                        cartChanged = true;
-                        item.price = dbPrice; 
-                    }
+                    item.price = standardPrice;
+                    item.is_discounted = isDisc;
+                    item.discount_price = discPrice;
 
                     if (dbProduct.title) item.title = dbProduct.title;
-                    if (dbProduct.image) item.image = dbProduct.image;
+                    if (dbProduct.image) item.image = dbProduct.image || (dbProduct.images && dbProduct.images[0]);
 
                     validCart.push(item);
                 }
@@ -227,9 +227,7 @@
                         alertBox.classList.remove('hidden');
                     }
                 }
-            } catch (err) {
-                console.error("Wystąpił błąd podczas walidacji koszyka:", err);
-            }
+            } catch (err) {}
         }
 
         async function renderCart() {
@@ -246,15 +244,33 @@
                 document.getElementById('discount-row').classList.add('hidden');
                 document.getElementById('total-val').innerText = '0.00 PLN';
                 currentTotalValue = 0;
+                if (appliedCouponCode) {
+                    removeCoupon();
+                }
                 return;
             }
 
             const subtotal = calculateCartSubtotal();
+
+            if (appliedCouponCode && subtotal < activeCouponMinAmount) {
+                removeCoupon();
+                const errorMsg = document.getElementById('coupon-error-msg');
+                if (errorMsg) {
+                    errorMsg.innerText = 'Brak wystarczających wymagań w twoim koszyku dla kodu rabatowego';
+                    errorMsg.classList.remove('hidden');
+                }
+            }
+
             const discountAmount = (subtotal * discountPercent) / 100;
             currentTotalValue = Math.max(0, subtotal - discountAmount);
 
             container.innerHTML = cart.map((item, index) => {
-                const price = (parseFloat(item.price) || 0).toFixed(2);
+                const standardPrice = parseFloat(item.price) || 0;
+                const isDisc = item.is_discounted === true;
+                const discPrice = (item.discount_price !== null && item.discount_price !== undefined && !isNaN(parseFloat(item.discount_price))) ? parseFloat(item.discount_price) : null;
+                const hasDiscount = isDisc && discPrice !== null && discPrice < standardPrice;
+                const displayPrice = hasDiscount ? discPrice : standardPrice;
+
                 const image = item.image || 'https://files-6wdzienniku.vercel.app/content/6wd/logo_favicon_6.svg';
                 const title = item.title || item.name || 'Produkt bez nazwy';
                 const quantity = item.quantity || 1;
@@ -264,7 +280,14 @@
                         <img src="${image}" alt="${title}" class="w-16 h-16 object-cover rounded-custom">
                         <div class="flex-grow">
                             <h3 class="font-bold text-sm text-gray-900">${title}</h3>
-                            <p class="text-xs text-brandViolet font-semibold">${price} PLN</p>
+                            <div class="flex items-center gap-2">
+                                ${hasDiscount ? `
+                                    <span class="text-xs text-brandViolet font-semibold">${displayPrice.toFixed(2)} PLN</span>
+                                    <span class="text-xs text-gray-400 line-through">${standardPrice.toFixed(2)} PLN</span>
+                                ` : `
+                                    <span class="text-xs text-brandViolet font-semibold">${standardPrice.toFixed(2)} PLN</span>
+                                `}
+                            </div>
                         </div>
                         <div class="flex items-center gap-2">
                             <span class="text-xs text-gray-500">Ilość: ${quantity}</span>
@@ -327,8 +350,18 @@
                 return;
             }
 
+            const subtotal = calculateCartSubtotal();
+            const minAmount = parseFloat(coupon.min_order_amount || coupon.minimum_amount || 0);
+
+            if (subtotal < minAmount) {
+                errorMsg.innerText = 'Brak wystarczających wymagań w twoim koszyku dla kodu rabatowego';
+                errorMsg.classList.remove('hidden');
+                return;
+            }
+
             appliedCouponCode = coupon.code;
-            discountPercent = coupon.discount_percent || coupon.discount_value || 0; 
+            discountPercent = parseFloat(coupon.discount_percent || coupon.discount_value || 0); 
+            activeCouponMinAmount = minAmount;
 
             document.getElementById('coupon-input-container').classList.add('hidden');
             document.getElementById('coupon-applied-badge').classList.remove('hidden');
@@ -343,9 +376,10 @@
         window.removeCoupon = async function() {
             appliedCouponCode = null;
             discountPercent = 0;
+            activeCouponMinAmount = 0;
 
             const codeInput = document.getElementById('coupon-code');
-            codeInput.value = '';
+            if (codeInput) codeInput.value = '';
             
             document.getElementById('coupon-error-msg').classList.add('hidden');
             document.getElementById('coupon-input-container').classList.remove('hidden');
@@ -424,12 +458,10 @@
                     paymentElement.mount('#payment-element');
 
                 } else {
-                    document.getElementById('auth-space')?.classList?.remove('hidden'); 
                     document.getElementById('auth-section').classList.remove('hidden');
                     document.getElementById('checkout-section').classList.add('hidden');
                 }
             } catch (err) {
-                console.error("Błąd checkout:", err);
                 const msg = document.getElementById('payment-message');
                 if (msg) {
                     msg.innerText = err.message;
@@ -450,7 +482,6 @@
                 const cart = getCartItems();
 
                 if (!session) {
-                    alert('Musisz być zalogowany.');
                     btn.disabled = false;
                     btn.innerText = 'Odbierz za darmo';
                     return;
@@ -484,8 +515,6 @@
                 }, 1000);
 
             } catch (err) {
-                console.error("Błąd darmowego zamówienia:", err);
-                alert(err.message || 'Wystąpił nieznany błąd.');
                 btn.disabled = false;
                 btn.innerText = 'Odbierz za darmo';
             }
