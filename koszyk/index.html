@@ -1,617 +1,337 @@
 <!DOCTYPE html>
 <html lang="pl">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Koszyk - 6WDzienniku</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://js.stripe.com/v3/"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <link rel="icon" type="image/x-icon" href="https://files-6wdzienniku.vercel.app/content/6wd/logo_favicon_6.svg">
-    <link href="https://fonts.googleapis.com/css2?family=Open+Sans+Condensed:ital,wght@0,300;0,700;1,300&family=Open+Sans:ital,wght@0,300;0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: { brandViolet: '#5B21B6', brandPink: '#EC4899' },
-                    fontFamily: { sans: ['"Open Sans"', 'sans-serif'], condensed: ['"Open Sans Condensed"', 'sans-serif'] },
-                    borderRadius: { 'custom': '10px' }
-                }
-            }
-        }
-    </script>
-    <style>
-        body { font-family: 'Open Sans', sans-serif; background-color: #FAFAFC; color: #1F2937; }
-        h1, h2, h3, .font-condensed { font-family: 'Open Sans Condensed', sans-serif; font-weight: 700; text-transform: uppercase; }
-        .text-gradient { background: linear-gradient(135deg, #5B21B6 0%, #EC4899 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Koszyk - 6WDzienniku</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://js.stripe.com/v3/"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link rel="icon" type="image/x-icon" href="https://files-6wdzienniku.vercel.app/content/6wd/logo_favicon_6.svg">
+<link href="https://fonts.googleapis.com/css2?family=Open+Sans+Condensed:ital,wght@0,300;0,700;1,300&family=Open+Sans:ital,wght@0,300;0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<script>
+tailwind.config={theme:{extend:{colors:{brandViolet:'#5B21B6',brandPink:'#EC4899'},fontFamily:{sans:['"Open Sans"','sans-serif'],condensed:['"Open Sans Condensed"','sans-serif']},borderRadius:{custom:'10px'}}}}
+</script>
+<style>
+body{font-family:'Open Sans',sans-serif;background:#FAFAFC;color:#1F2937}
+h1,h2,h3,.font-condensed{font-family:'Open Sans Condensed',sans-serif;font-weight:700;text-transform:uppercase}
+.text-gradient{background:linear-gradient(135deg,#5B21B6,#EC4899);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+</style>
 </head>
 <body class="min-h-screen flex flex-col justify-between overflow-x-hidden">
 
-    <div id="toast" class="fixed top-5 right-5 z-50 opacity-0 pointer-events-none transition-opacity duration-300 bg-gray-900 text-white px-5 py-3 rounded-custom shadow-xl border border-purple-500/30 flex items-center gap-3">
-        <span id="toast-message" class="text-sm font-medium">Powiadomienie</span>
+<div id="toast" class="fixed top-5 right-5 z-50 opacity-0 pointer-events-none transition-opacity duration-300 bg-gray-900 text-white px-5 py-3 rounded-custom shadow-xl border border-purple-500/30">
+  <span id="toast-message" class="text-sm font-medium"></span>
+</div>
+
+<header class="w-full bg-white border-b border-gray-200 sticky top-0 z-40">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
+    <a href="https://6wdzienniku.vercel.app/"><img src="https://files-6wdzienniku.vercel.app/content/6wd/logo_6wdzienn_kolor.png" alt="6 w dzienniku" class="h-16 sm:h-20 object-contain"></a>
+    <a href="/sklep" class="text-sm font-semibold text-brandViolet hover:underline">← Powrót do sklepu</a>
+  </div>
+</header>
+
+<main class="flex-grow max-w-5xl mx-auto px-4 sm:px-6 py-10 w-full">
+  <h1 class="text-3xl sm:text-4xl mb-8">Twój <span class="text-gradient">Koszyk</span></h1>
+
+  <div id="cart-alert-box" class="hidden mb-6 bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-custom text-sm shadow-sm">
+    Ceny lub dostępność produktów w Twoim koszyku uległy zmianie od Twojej poprzedniej wizyty.
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+    <div class="lg:col-span-7 space-y-4" id="cart-items-container"><p class="text-gray-500">Ładowanie koszyka...</p></div>
+
+    <div class="lg:col-span-5">
+      <div class="bg-white p-6 rounded-custom border border-gray-200 shadow-sm space-y-6">
+        <h2 class="text-xl border-b border-gray-100 pb-3">Podsumowanie</h2>
+
+        <div>
+          <div id="coupon-input-container" class="flex gap-2">
+            <input type="text" id="coupon-code" placeholder="Kod rabatowy" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-custom focus:outline-none focus:border-brandViolet uppercase">
+            <button type="button" onclick="applyCoupon()" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-xs font-semibold rounded-custom transition">Zastosuj</button>
+          </div>
+          <p id="coupon-error-msg" class="text-xs text-red-500 font-semibold mt-2 hidden"></p>
+        </div>
+
+        <div id="coupon-applied-badge" class="hidden flex items-center justify-between bg-green-50 border border-green-200 p-3 rounded-custom text-xs">
+          <span class="text-green-700 font-semibold">✔ Aktywny kod: <b id="applied-code-name" class="uppercase"></b> (<span id="applied-code-desc"></span>)</span>
+          <button type="button" onclick="removeCoupon()" class="text-red-500 hover:underline font-semibold">Usuń</button>
+        </div>
+
+        <div class="space-y-2 text-sm border-t border-b border-gray-100 py-4">
+          <div class="flex justify-between text-gray-600"><span>Wartość produktów:</span><span id="subtotal-val">0.00 PLN</span></div>
+          <div id="discount-row" class="flex justify-between text-pink-600 hidden"><span>Rabat:</span><span id="discount-val"></span></div>
+          <div class="flex justify-between font-bold text-base text-gray-900 pt-2"><span>Razem:</span><span id="total-val" class="text-brandViolet">0.00 PLN</span></div>
+        </div>
+
+        <div id="auth-section" class="hidden">
+          <div class="bg-purple-50 p-4 rounded-custom border border-purple-100 text-xs text-purple-900 mb-4">Zaloguj się, aby sfinalizować zamówienie i otrzymać dostęp do materiałów.</div>
+          <a href="/api-login/" class="block w-full py-3 bg-brandViolet text-white text-center font-bold rounded-custom shadow hover:bg-purple-800 transition">Zaloguj się / Zarejestruj</a>
+        </div>
+
+        <div id="checkout-section" class="hidden">
+          <div id="user-info-box" class="text-xs text-gray-500 mb-4 font-medium"></div>
+          <div id="stripe-container">
+            <form id="payment-form">
+              <div id="payment-element" class="mb-4"></div>
+              <button id="submit-btn" type="submit" class="w-full py-3.5 bg-gradient-to-r from-brandViolet to-brandPink text-white font-bold rounded-custom shadow-md hover:opacity-95 transition disabled:opacity-50">Zapłać teraz</button>
+            </form>
+          </div>
+          <div id="payment-message" class="text-xs text-red-500 mt-2 hidden font-semibold"></div>
+          <div id="free-order-container" class="hidden space-y-3">
+            <div class="bg-green-50 border border-green-200 p-3 rounded-custom text-xs text-green-800 font-medium">Twoje zamówienie po uwzględnieniu rabatu jest całkowicie darmowe! Nie musisz podawać karty płatniczej.</div>
+            <button type="button" id="free-submit-btn" onclick="processFreeOrder()" class="w-full py-3.5 bg-green-600 hover:bg-green-700 text-white font-bold rounded-custom shadow-md transition disabled:opacity-50">Odbierz za darmo</button>
+          </div>
+        </div>
+      </div>
     </div>
+  </div>
+</main>
 
-    <header class="w-full bg-white border-b border-gray-200 sticky top-0 z-40">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
-            <a href="https://6wdzienniku.vercel.app/">
-                <img src="https://files-6wdzienniku.vercel.app/content/6wd/logo_6wdzienn_kolor.png" alt="6 w dzienniku" class="h-16 sm:h-20 object-contain">
-            </a>
-            <a href="/sklep" class="text-sm font-semibold text-brandViolet hover:underline flex items-center gap-1 transition">
-                ← Powrót do sklepu
-            </a>
+<footer class="bg-white border-t border-gray-200 py-8 text-center text-sm text-gray-500">
+  <p>© 2026 <b>6WDzienniku</b></p><p>Wszelkie prawa zastrzeżone.</p>
+</footer>
+
+<script>
+const SUPABASE_URL="https://fxksikgdberwgttvglko.supabase.co";
+const SUPABASE_ANON_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ4a3Npa2dkYmVyd2d0dHZnbGtvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA0MzU3NzYsImV4cCI6MjEwNjAxMTc3Nn0.sKf3vvVbaae5-mdg5zwqrgUl6AkXjENanwhDWbH_PXw";
+const STRIPE_PK="pk_live_51U9Lv5Q2ih8UDd9IQJ2lVSHCayHb6qrJUN1y8i3za2f6GZNA0sv4H5tBsFcdbyZAOHL3nvJvQCCA76XYtvBow0kL00yLvmCiTI";
+const supabaseClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
+const stripe=Stripe(STRIPE_PK);
+const FALLBACK_IMG='https://files-6wdzienniku.vercel.app/content/6wd/logo_favicon_6.svg';
+const STRIPE_MIN=2; 
+
+let elements=null,paymentEl=null,activeCoupon=null,currentTotal=0,currentDiscount=0,busy=false,again=false,toastT;
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const r2=n=>Math.round((n+Number.EPSILON)*100)/100;
+const money=n=>r2(n).toFixed(2)+' PLN';
+
+function showToast(m){const t=$('toast');$('toast-message').innerText=m;t.classList.remove('opacity-0','pointer-events-none');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.add('opacity-0','pointer-events-none'),4000)}
+function getCart(){try{const c=JSON.parse(localStorage.getItem('cart')||'[]');return Array.isArray(c)?c:[]}catch{return[]}}
+function saveCart(c){localStorage.setItem('cart',JSON.stringify(c))}
+
+const qty=i=>Math.max(1,parseInt(i.quantity)||1);
+const pid=i=>String(i.id||i.product_id);
+function unit(i){const p=parseFloat(i.price)||0,d=parseFloat(i.discount_price);return(i.is_discounted===true&&!isNaN(d)&&d>=0&&d<p)?d:p}
+const subtotalOf=cart=>r2(cart.reduce((s,i)=>s+unit(i)*qty(i),0));
+
+function eligibleItems(coupon,cart){
+  return cart.filter(i=>{
+    if(coupon.category_restriction&&i.category!==coupon.category_restriction)return false;
+    if(coupon.product_ids&&coupon.product_ids.length&&!coupon.product_ids.map(String).includes(pid(i)))return false;
+    return true;
+  });
+}
+function calcDiscount(subtotal,coupon,cart){
+  if(!coupon)return 0;
+  const elig=subtotalOf(eligibleItems(coupon,cart));
+  let d=0;
+  if(coupon.discount_type==='percent')d=elig*(parseFloat(coupon.discount_value)||0)/100;
+  else if(coupon.discount_type==='amount')d=Math.min(elig,parseFloat(coupon.discount_value)||0);
+  else if(coupon.discount_type==='threshold_reward'){
+    const th=parseFloat(coupon.step_threshold)||0,rw=parseFloat(coupon.step_reward)||0;
+    if(th>0&&rw>0)d=Math.floor(elig/th)*rw;
+  }
+  return r2(Math.min(Math.max(d,0),subtotal));
+}
+
+async function syncCart(){
+  const cart=getCart();if(!cart.length)return;
+  try{
+    const ids=cart.map(pid).filter(x=>x&&x!=='undefined');if(!ids.length)return;
+    const{data:dbp,error}=await supabaseClient.from('products').select('*').in('id',ids);
+    if(error||!dbp)return;
+    let changed=false;const valid=[];
+    for(const item of cart){
+      const p=dbp.find(x=>x.id==pid(item));
+      if(!p||p.is_active===false||p.active===false){changed=true;continue}
+      const before=unit(item);
+      item.price=parseFloat(p.price??p.amount)||0;
+      item.is_discounted=p.is_discounted===true;
+      item.discount_price=(p.discount_price!=null&&p.discount_price!=='')?parseFloat(p.discount_price):null;
+      item.category=p.category||'';
+      if(p.title)item.title=p.title;
+      item.image=(p.images&&p.images[0])||p.image||item.image||'';
+      if(r2(before)!==r2(unit(item)))changed=true;
+      valid.push(item);
+    }
+    saveCart(valid);
+    if(changed)$('cart-alert-box').classList.remove('hidden');
+  }catch(e){console.error('Synchronizacja koszyka:',e)}
+}
+
+function showCouponError(msg){const e=$('coupon-error-msg');e.innerText=msg;e.classList.remove('hidden')}
+function clearCouponUI(){
+  activeCoupon=null;$('coupon-code').value='';
+  $('coupon-input-container').classList.remove('hidden');$('coupon-applied-badge').classList.add('hidden');
+}
+
+async function renderCart(sync=false){
+  if(sync)await syncCart();
+  const cart=getCart(),box=$('cart-items-container');
+
+  if(!cart.length){
+    box.innerHTML='<p class="text-gray-500">Twój koszyk jest pusty.</p>';
+    $('subtotal-val').innerText=money(0);$('total-val').innerText=money(0);$('discount-row').classList.add('hidden');
+    currentTotal=0;currentDiscount=0;clearCouponUI();return;
+  }
+
+  const subtotal=subtotalOf(cart);
+
+  if(activeCoupon){
+    const min=parseFloat(activeCoupon.min_order_amount)||0;
+    if(subtotal<min){clearCouponUI();showCouponError('Wartość koszyka spadła poniżej minimum wymaganego dla tego kodu.')}
+    else if(calcDiscount(subtotal,activeCoupon,cart)<=0){clearCouponUI();showCouponError('Kod nie dotyczy produktów w koszyku.')}
+  }
+
+  currentDiscount=calcDiscount(subtotal,activeCoupon,cart);
+  currentTotal=r2(Math.max(0,subtotal-currentDiscount));
+
+  box.innerHTML=cart.map((item,idx)=>{
+    const std=parseFloat(item.price)||0,u=unit(item),promo=u<std;
+    return `<div class="bg-white p-4 rounded-custom border border-gray-100 shadow-sm flex items-center justify-between gap-4">
+      <img src="${esc(item.image||FALLBACK_IMG)}" alt="${esc(item.title||item.name)}" class="w-16 h-16 object-cover rounded-custom">
+      <div class="flex-grow">
+        <h3 class="font-bold text-sm text-gray-900">${esc(item.title||item.name||'Produkt bez nazwy')}</h3>
+        <div class="flex items-center gap-2">
+          <span class="text-xs text-brandViolet font-semibold">${money(u)}</span>
+          ${promo?`<span class="text-xs text-gray-400 line-through">${money(std)}</span>`:''}
         </div>
-    </header>
-
-    <main class="flex-grow max-w-5xl mx-auto px-4 sm:px-6 py-10 w-full">
-        <h1 class="text-3xl sm:text-4xl font-condensed mb-8">Twój <span class="text-gradient">Koszyk</span></h1>
-
-        <div id="cart-alert-box" class="hidden mb-6 bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-custom text-sm flex items-center gap-3 shadow-sm">
-            <svg class="w-5 h-5 flex-shrink-0 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
-            </svg>
-            <span id="cart-alert-text">Ceny lub dostępność produktów w Twoim koszyku uległy zmianie od Twojej poprzedniej wizyty.</span>
-        </div>
-
-        <div id="cart-content" class="grid grid-cols-1 lg:grid-cols-12 gap-8">
-            <div class="lg:col-span-7 space-y-4" id="cart-items-container">
-                <p class="text-gray-500 font-sans">Ładowanie koszyka...</p>
-            </div>
-
-            <div class="lg:col-span-5">
-                <div class="bg-white p-6 rounded-custom border border-gray-200 shadow-sm space-y-6">
-                    <h2 class="text-xl font-condensed border-b border-gray-100 pb-3">Podsumowanie</h2>
-
-                    <div>
-                        <div id="coupon-input-container" class="flex gap-2">
-                            <input type="text" id="coupon-code" placeholder="Kod rabatowy" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-custom focus:outline-none focus:border-brandViolet uppercase">
-                            <button type="button" onclick="applyCoupon()" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 text-xs font-semibold rounded-custom transition">Zastosuj</button>
-                        </div>
-                        <p id="coupon-error-msg" class="text-xs text-red-500 font-semibold mt-2 hidden"></p>
-                    </div>
-
-                    <div id="coupon-applied-badge" class="hidden flex items-center justify-between bg-green-50 border border-green-200 p-3 rounded-custom text-xs">
-                        <div class="flex items-center gap-2 text-green-700 font-semibold">
-                            <svg class="w-4 h-4 fill-current" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
-                            </svg>
-                            <span>Aktywny kod: <b id="applied-code-name" class="uppercase"></b> (<span id="applied-code-desc">rabat</span>)</span>
-                        </div>
-                        <button type="button" onclick="removeCoupon()" class="text-red-500 hover:underline font-semibold">Usuń</button>
-                    </div>
-
-                    <div class="space-y-2 text-sm border-t border-b border-gray-100 py-4">
-                        <div class="flex justify-between text-gray-600">
-                            <span>Wartość produktów:</span>
-                            <span id="subtotal-val">0.00 PLN</span>
-                        </div>
-                        <div id="discount-row" class="flex justify-between text-pink-600 hidden">
-                            <span>Rabat:</span>
-                            <span id="discount-val">-0.00 PLN</span>
-                        </div>
-                        <div class="flex justify-between font-bold text-base text-gray-900 pt-2">
-                            <span>Razem:</span>
-                            <span id="total-val" class="text-brandViolet">0.00 PLN</span>
-                        </div>
-                    </div>
-
-                    <div id="auth-section" class="hidden">
-                        <div class="bg-purple-50 p-4 rounded-custom border border-purple-100 text-xs text-purple-900 mb-4">
-                            Zaloguj się, aby sfinalizować zamówienie i otrzymać dostęp do materiałów.
-                        </div>
-                        <a href="/api-login/" class="block w-full py-3 bg-brandViolet text-white text-center font-bold rounded-custom shadow hover:bg-purple-800 transition">Zaloguj się / Zarejestruj</a>
-                    </div>
-
-                    <div id="checkout-section" class="hidden">
-                        <div id="user-info-box" class="text-xs text-gray-500 mb-4 font-medium"></div>
-                        
-                        <div id="stripe-container">
-                            <form id="payment-form">
-                                <div id="payment-element" class="mb-4"></div>
-                                <button id="submit-btn" type="submit" class="w-full py-3.5 bg-gradient-to-r from-brandViolet to-brandPink text-white font-bold rounded-custom shadow-md hover:opacity-95 transition disabled:opacity-50">Zapłać teraz</button>
-                                <div id="payment-message" class="text-xs text-red-500 mt-2 hidden font-semibold"></div>
-                            </form>
-                        </div>
-
-                        <div id="free-order-container" class="hidden space-y-3">
-                            <div class="bg-green-50 border border-green-200 p-3 rounded-custom text-xs text-green-800 font-medium">
-                                Twoje zamówienie po uwzględnieniu rabatu jest całkowicie darmowe! Nie musisz podawać karty płatniczej.
-                            </div>
-                            <button type="button" id="free-submit-btn" onclick="processFreeOrder()" class="w-full py-3.5 bg-green-600 hover:bg-green-700 text-white font-bold rounded-custom shadow-md transition">Odbierz za darmo</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </main>
-
-    <footer class="bg-white border-t border-gray-200 py-8 text-center text-sm text-gray-500">
-        <div class="max-w-6xl mx-auto px-4 space-y-1">
-            <p>© 2026 <b>6WDzienniku</b></p>
-            <p>Wszelkie prawa zastrzeżone.</p>
-        </div>
-    </footer>
-
-    <script>
-        const SUPABASE_URL = "https://fxksikgdberwgttvglko.supabase.co";
-        const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ4a3Npa2dkYmVyd2d0dHZnbGtvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA0MzU3NzYsImV4cCI6MjEwNjAxMTc3Nn0.sKf3vvVbaae5-mdg5zwqrgUl6AkXjENanwhDWbH_PXw";
-        const STRIPE_PK = "pk_live_51U9Lv5Q2ih8UDd9IQJ2lVSHCayHb6qrJUN1y8i3za2f6GZNA0sv4H5tBsFcdbyZAOHL3nvJvQCCA76XYtvBow0kL00yLvmCiTI";
-        
-        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-        const stripe = Stripe(STRIPE_PK);
-
-        let elements = null;
-        let activeCoupon = null; 
-        let currentTotalValue = 0;
-        let currentDiscountValue = 0;
-        let isFetchingIntent = false;
-
-        function showToast(msg) {
-            const toast = document.getElementById('toast');
-            if (!toast) return;
-            document.getElementById('toast-message').innerText = msg;
-            toast.classList.remove('opacity-0', 'pointer-events-none');
-            toast.classList.add('opacity-100');
-            setTimeout(() => {
-                toast.classList.remove('opacity-100');
-                toast.classList.add('opacity-0', 'pointer-events-none');
-            }, 4000);
-        }
-
-        function getCartItems() {
-            try {
-                return JSON.parse(localStorage.getItem('cart') || '[]');
-            } catch (e) {
-                return [];
-            }
-        }
-
-        function calculateCartSubtotal() {
-            const cart = getCartItems();
-            return cart.reduce((sum, item) => {
-                const price = (item.discount_price !== null && item.discount_price !== undefined && item.discount_price !== '') 
-                    ? parseFloat(item.discount_price) 
-                    : (parseFloat(item.price) || 0);
-                const qty = parseInt(item.quantity) || 1;
-                return sum + (price * qty);
-            }, 0);
-        }
-
-        async function validateAndSyncCart() {
-            let cart = getCartItems();
-            if (!cart || cart.length === 0) return;
-
-            try {
-                const productIds = cart.map(item => item.id || item.product_id).filter(Boolean);
-                if (productIds.length === 0) return;
-
-                const { data: dbProducts, error } = await supabaseClient
-                    .from('products')
-                    .select('*')
-                    .in('id', productIds);
-
-                if (error) return;
-
-                let cartChanged = false;
-                let validCart = [];
-
-                for (let item of cart) {
-                    const itemId = item.id || item.product_id;
-                    const dbProduct = dbProducts ? dbProducts.find(p => p.id == itemId) : null;
-
-                    if (!dbProduct || dbProduct.is_active === false || dbProduct.active === false) {
-                        cartChanged = true;
-                        continue; 
-                    }
-
-                    const standardPrice = parseFloat(dbProduct.price || dbProduct.amount || 0);
-                    const isDisc = dbProduct.is_discounted === true;
-                    const discPrice = (dbProduct.discount_price !== null && dbProduct.discount_price !== undefined) ? parseFloat(dbProduct.discount_price) : null;
-
-                    item.price = standardPrice;
-                    item.is_discounted = isDisc;
-                    item.discount_price = discPrice;
-                    item.category = dbProduct.category || '';
-
-                    if (dbProduct.title) item.title = dbProduct.title;
-                    if (dbProduct.image) item.image = dbProduct.image || (dbProduct.images && dbProduct.images[0]);
-
-                    validCart.push(item);
-                }
-
-                if (cartChanged) {
-                    localStorage.setItem('cart', JSON.stringify(validCart));
-                    const alertBox = document.getElementById('cart-alert-box');
-                    if (alertBox) {
-                        alertBox.classList.remove('hidden');
-                    }
-                }
-            } catch (err) {}
-        }
-
-        function calculateDiscount(subtotal, coupon, cart) {
-            if (!coupon) return 0;
-
-            const type = coupon.discount_type;
-            
-            if (type === 'percent') {
-                const val = parseFloat(coupon.discount_value || 0);
-                return (subtotal * val) / 100;
-            } 
-            else if (type === 'amount') {
-                const val = parseFloat(coupon.discount_value || 0);
-                return Math.min(subtotal, val);
-            } 
-            else if (type === 'threshold_reward') {
-                const threshold = parseFloat(coupon.step_threshold || 0);
-                const reward = parseFloat(coupon.step_reward || 0);
-                if (threshold <= 0 || reward <= 0) return 0;
-                
-                let eligibleSubtotal = subtotal;
-                if (coupon.category_restriction || (coupon.product_ids && coupon.product_ids.length > 0)) {
-                    eligibleSubtotal = cart.reduce((sum, item) => {
-                        const itemPrice = (item.discount_price !== null && item.discount_price !== undefined && item.discount_price !== '') 
-                            ? parseFloat(item.discount_price) 
-                            : (parseFloat(item.price) || 0);
-                        const itemQty = parseInt(item.quantity) || 1;
-                        
-                        let matches = true;
-                        if (coupon.category_restriction && item.category !== coupon.category_restriction) {
-                            matches = false;
-                        }
-                        if (coupon.product_ids && coupon.product_ids.length > 0 && !coupon.product_ids.includes(String(item.id || item.product_id))) {
-                            matches = false;
-                        }
-                        return matches ? sum + (itemPrice * itemQty) : sum;
-                    }, 0);
-                }
-
-                const multiplier = Math.floor(eligibleSubtotal / threshold);
-                return multiplier * reward;
-            }
-            return 0;
-        }
-
-        async function renderCart() {
-            await validateAndSyncCart();
-
-            const cart = getCartItems();
-            const container = document.getElementById('cart-items-container');
-
-            if (!container) return;
-
-            if (!cart || cart.length === 0) {
-                container.innerHTML = '<p class="text-gray-500 font-sans">Twój koszyk jest pusty.</p>';
-                document.getElementById('subtotal-val').innerText = '0.00 PLN';
-                document.getElementById('discount-row').classList.add('hidden');
-                document.getElementById('total-val').innerText = '0.00 PLN';
-                currentTotalValue = 0;
-                currentDiscountValue = 0;
-                if (activeCoupon) {
-                    removeCoupon();
-                }
-                return;
-            }
-
-            const subtotal = calculateCartSubtotal();
-
-            if (activeCoupon) {
-                const minOrder = parseFloat(activeCoupon.min_order_amount || 0);
-                if (subtotal < minOrder) {
-                    removeCoupon();
-                    const errorMsg = document.getElementById('coupon-error-msg');
-                    if (errorMsg) {
-                        errorMsg.innerText = 'Wartość koszyka spadła poniżej minimum wymaganego dla tego kodu.';
-                        errorMsg.classList.remove('hidden');
-                    }
-                }
-            }
-
-            currentDiscountValue = calculateDiscount(subtotal, activeCoupon, cart);
-            currentTotalValue = Math.max(0, subtotal - currentDiscountValue);
-
-            container.innerHTML = cart.map((item, index) => {
-                const standardPrice = parseFloat(item.price) || 0;
-                const isDisc = item.is_discounted === true;
-                const discPrice = (item.discount_price !== null && item.discount_price !== undefined && !isNaN(parseFloat(item.discount_price))) ? parseFloat(item.discount_price) : null;
-                const hasDiscount = isDisc && discPrice !== null && discPrice < standardPrice;
-                const displayPrice = hasDiscount ? discPrice : standardPrice;
-
-                const image = item.image || 'https://files-6wdzienniku.vercel.app/content/6wd/logo_favicon_6.svg';
-                const title = item.title || item.name || 'Produkt bez nazwy';
-                const quantity = item.quantity || 1;
-
-                return `
-                    <div class="bg-white p-4 rounded-custom border border-gray-100 shadow-sm flex items-center justify-between gap-4">
-                        <img src="${image}" alt="${title}" class="w-16 h-16 object-cover rounded-custom">
-                        <div class="flex-grow">
-                            <h3 class="font-bold text-sm text-gray-900">${title}</h3>
-                            <div class="flex items-center gap-2">
-                                ${hasDiscount ? `
-                                    <span class="text-xs text-brandViolet font-semibold">${displayPrice.toFixed(2)} PLN</span>
-                                    <span class="text-xs text-gray-400 line-through">${standardPrice.toFixed(2)} PLN</span>
-                                ` : `
-                                    <span class="text-xs text-brandViolet font-semibold">${standardPrice.toFixed(2)} PLN</span>
-                                `}
-                            </div>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <span class="text-xs text-gray-500">Ilość: ${quantity}</span>
-                            <button type="button" onclick="removeItem(${index})" class="p-1 text-gray-400 hover:text-red-500 transition" title="Usuń z koszyka">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                            </button>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-
-            document.getElementById('subtotal-val').innerText = `${subtotal.toFixed(2)} PLN`;
-            
-            if (currentDiscountValue > 0) {
-                document.getElementById('discount-row').classList.remove('hidden');
-                document.getElementById('discount-val').innerText = `-${currentDiscountValue.toFixed(2)} PLN`;
-            } else {
-                document.getElementById('discount-row').classList.add('hidden');
-            }
-
-            document.getElementById('total-val').innerText = `${currentTotalValue.toFixed(2)} PLN`;
-        }
-
-        window.removeItem = async function(idx) {
-            let cart = getCartItems();
-            cart.splice(idx, 1);
-            localStorage.setItem('cart', JSON.stringify(cart));
-            await renderCart();
-            await initCheckout();
-        };
-
-        window.applyCoupon = async function() {
-            const errorMsg = document.getElementById('coupon-error-msg');
-            errorMsg.classList.add('hidden'); 
-
-            if (activeCoupon) {
-                errorMsg.innerText = 'Kupon jest już zastosowany!';
-                errorMsg.classList.remove('hidden');
-                return;
-            }
-
-            const codeInput = document.getElementById('coupon-code');
-            const code = codeInput.value.trim().toUpperCase();
-
-            if (!code) {
-                errorMsg.innerText = 'Wpisz kod rabatowy.';
-                errorMsg.classList.remove('hidden');
-                return;
-            }
-
-            const { data: coupon, error } = await supabaseClient
-                .from('coupons')
-                .select('*')
-                .eq('code', code)
-                .maybeSingle();
-            
-            if (error || !coupon) {
-                errorMsg.innerText = 'Kupon jest nieprawidłowy lub nie istnieje.';
-                errorMsg.classList.remove('hidden');
-                return;
-            }
-
-            // Check expiration
-            if (coupon.valid_until && new Date(coupon.valid_until) < new Date()) {
-                errorMsg.innerText = 'Ten kod rabatowy wygasł.';
-                errorMsg.classList.remove('hidden');
-                return;
-            }
-
-            const subtotal = calculateCartSubtotal();
-            const minAmount = parseFloat(coupon.min_order_amount || 0);
-
-            if (minAmount > 0 && subtotal < minAmount) {
-                errorMsg.innerText = `Minimalna kwota zamówienia dla tego kodu to ${minAmount} PLN.`;
-                errorMsg.classList.remove('hidden');
-                return;
-            }
-
-            activeCoupon = coupon;
-
-            let descText = '';
-            if (coupon.discount_type === 'percent') descText = `${coupon.discount_value}%`;
-            else if (coupon.discount_type === 'amount') descText = `${coupon.discount_value} PLN`;
-            else if (coupon.discount_type === 'threshold_reward') descText = `${coupon.step_reward} zł za każde ${coupon.step_threshold} zł`;
-
-            document.getElementById('coupon-input-container').classList.add('hidden');
-            document.getElementById('coupon-applied-badge').classList.remove('hidden');
-            document.getElementById('applied-code-name').innerText = activeCoupon.code;
-            document.getElementById('applied-code-desc').innerText = descText;
-
-            showToast(`Zastosowano kod rabatowy!`);
-            await renderCart();
-            await initCheckout();
-        };
-
-        window.removeCoupon = async function() {
-            activeCoupon = null;
-
-            const codeInput = document.getElementById('coupon-code');
-            if (codeInput) codeInput.value = '';
-            
-            document.getElementById('coupon-error-msg').classList.add('hidden');
-            document.getElementById('coupon-input-container').classList.remove('hidden');
-            document.getElementById('coupon-applied-badge').classList.add('hidden');
-
-            showToast('Usunięto kod rabatowy.');
-            await renderCart();
-            await initCheckout();
-        };
-
-        async function initCheckout() {
-            if (isFetchingIntent) return;
-            try {
-                const { data: { session } } = await supabaseClient.auth.getSession();
-                const cart = getCartItems();
-                
-                if (session) {
-                    document.getElementById('auth-section').classList.add('hidden');
-                    document.getElementById('checkout-section').classList.remove('hidden');
-                    document.getElementById('user-info-box').innerText = `Zalogowano jako: ${session.user.email}`;
-
-                    if (!cart || cart.length === 0) {
-                        document.getElementById('checkout-section').classList.add('hidden');
-                        return;
-                    }
-
-                    if (currentTotalValue <= 0.01) {
-                        document.getElementById('stripe-container').classList.add('hidden');
-                        document.getElementById('free-order-container').classList.remove('hidden');
-                        return;
-                    } else {
-                        document.getElementById('stripe-container').classList.remove('hidden');
-                        document.getElementById('free-order-container').classList.add('hidden');
-                    }
-
-                    isFetchingIntent = true;
-                    const response = await fetch('/api/create-payment-intent', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            items: cart,
-                            userId: session.user.id,
-                            couponCode: activeCoupon ? activeCoupon.code : null,
-                            discountAmount: currentDiscountValue
-                        })
-                    });
-
-                    let data = {};
-                    const contentType = response.headers.get("content-type");
-                    if (contentType && contentType.includes("application/json")) {
-                        data = await response.json();
-                    }
-
-                    if (!response.ok || !data.clientSecret) {
-                        throw new Error(data.message || data.error || `Błąd serwera (${response.status})`);
-                    }
-
-                    elements = stripe.elements({ 
-                        clientSecret: data.clientSecret,
-                        defaultValues: {
-                            billingDetails: {
-                                email: session.user.email
-                            }
-                        }
-                    });
-
-                    const paymentElement = elements.create('payment', {
-                        fields: {
-                            billingDetails: {
-                                email: 'never' 
-                            }
-                        }
-                    });
-                    
-                    const paymentContainer = document.getElementById('payment-element');
-                    paymentContainer.innerHTML = ''; 
-                    paymentElement.mount('#payment-element');
-
-                } else {
-                    document.getElementById('auth-section').classList.remove('hidden');
-                    document.getElementById('checkout-section').classList.add('hidden');
-                }
-            } catch (err) {
-                const msg = document.getElementById('payment-message');
-                if (msg) {
-                    msg.innerText = err.message;
-                    msg.classList.remove('hidden');
-                }
-            } finally {
-                isFetchingIntent = false;
-            }
-        }
-
-        window.processFreeOrder = async function() {
-            const btn = document.getElementById('free-submit-btn');
-            btn.disabled = true;
-            btn.innerText = 'Przetwarzanie...';
-
-            try {
-                const { data: { session } } = await supabaseClient.auth.getSession();
-                const cart = getCartItems();
-
-                if (!session) {
-                    btn.disabled = false;
-                    btn.innerText = 'Odbierz za darmo';
-                    return;
-                }
-
-                const response = await fetch('/api/create-free-order', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        items: cart,
-                        userId: session.user.id,
-                        couponCode: activeCoupon ? activeCoupon.code : null,
-                        discountAmount: currentDiscountValue
-                    })
-                });
-
-                let result = {};
-                const contentType = response.headers.get("content-type");
-                if (contentType && contentType.includes("application/json")) {
-                    result = await response.json();
-                }
-
-                if (!response.ok) {
-                    throw new Error(result.error || result.message || 'Wystąpił błąd podczas finalizacji darmowego zamówienia.');
-                }
-
-                localStorage.removeItem('cart');
-                
-                showToast('Zamówienie zrealizowane pomyślnie!');
-                setTimeout(() => {
-                    window.location.href = '/mojekonto?payment_success=true';
-                }, 1000);
-
-            } catch (err) {
-                btn.disabled = false;
-                btn.innerText = 'Odbierz za darmo';
-            }
-        };
-
-        document.getElementById('payment-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const submitBtn = document.getElementById('submit-btn');
-            const messageDiv = document.getElementById('payment-message');
-            
-            submitBtn.disabled = true;
-            submitBtn.innerText = 'Przetwarzanie płatności...';
-            messageDiv.classList.add('hidden');
-
-            const { data: { session } } = await supabaseClient.auth.getSession();
-            const userEmail = session ? session.user.email : undefined;
-
-            const { error } = await stripe.confirmPayment({
-                elements,
-                confirmParams: {
-                    return_url: window.location.origin + '/mojekonto?payment_success=true',
-                    payment_method_data: {
-                        billing_details: {
-                            email: userEmail
-                        }
-                    }
-                }
-            });
-
-            if (error) {
-                messageDiv.innerText = error.message;
-                messageDiv.classList.remove('hidden');
-                submitBtn.disabled = false;
-                submitBtn.innerText = 'Zapłać teraz';
-            }
-        });
-
-        document.addEventListener('DOMContentLoaded', async () => {
-            await renderCart();
-            await initCheckout();
-        });
-    </script>
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="text-xs text-gray-500">Ilość: ${qty(item)}</span>
+        <button type="button" onclick="removeItem(${idx})" class="p-1 text-gray-400 hover:text-red-500 transition" title="Usuń z koszyka">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+        </button>
+      </div></div>`;
+  }).join('');
+
+  $('subtotal-val').innerText=money(subtotal);
+  $('discount-row').classList.toggle('hidden',currentDiscount<=0);
+  $('discount-val').innerText='-'+money(currentDiscount);
+  $('total-val').innerText=money(currentTotal);
+}
+
+window.removeItem=async idx=>{const c=getCart();c.splice(idx,1);saveCart(c);await renderCart();await initCheckout()};
+
+window.applyCoupon=async function(){
+  $('coupon-error-msg').classList.add('hidden');
+  if(activeCoupon)return showCouponError('Kupon jest już zastosowany!');
+  const code=$('coupon-code').value.trim().toUpperCase();
+  if(!code)return showCouponError('Wpisz kod rabatowy.');
+  const cart=getCart();
+  if(!cart.length)return showCouponError('Twój koszyk jest pusty.');
+
+  const{data:c,error}=await supabaseClient.from('coupons').select('*').eq('code',code).maybeSingle();
+  if(error||!c)return showCouponError('Kupon jest nieprawidłowy lub nie istnieje.');
+  if(c.valid_until&&new Date(c.valid_until)<new Date())return showCouponError('Ten kod rabatowy wygasł.');
+  if(c.usage_limit!=null&&c.used_count!=null&&c.used_count>=c.usage_limit)return showCouponError('Limit użyć tego kodu został wyczerpany.');
+
+  const subtotal=subtotalOf(cart),min=parseFloat(c.min_order_amount)||0;
+  if(min>0&&subtotal<min)return showCouponError(`Minimalna kwota zamówienia dla tego kodu to ${min} PLN.`);
+  if(calcDiscount(subtotal,c,cart)<=0)return showCouponError('Ten kod nie dotyczy produktów w Twoim koszyku.');
+
+  activeCoupon=c;
+  const desc=c.discount_type==='percent'?`${c.discount_value}%`:c.discount_type==='amount'?`${c.discount_value} PLN`:`${c.step_reward} zł za każde ${c.step_threshold} zł`;
+  $('coupon-input-container').classList.add('hidden');$('coupon-applied-badge').classList.remove('hidden');
+  $('applied-code-name').innerText=c.code;$('applied-code-desc').innerText=desc;
+  showToast('Zastosowano kod rabatowy!');
+  await renderCart();await initCheckout();
+};
+
+window.removeCoupon=async function(){
+  clearCouponUI();$('coupon-error-msg').classList.add('hidden');
+  showToast('Usunięto kod rabatowy.');
+  await renderCart();await initCheckout();
+};
+
+function setPayMsg(m){const e=$('payment-message');if(m){e.innerText=m;e.classList.remove('hidden')}else e.classList.add('hidden')}
+
+async function initCheckout(){
+  if(busy){again=true;return}
+  busy=true;setPayMsg('');
+  try{
+    const{data:{session}}=await supabaseClient.auth.getSession();
+    const cart=getCart();
+    if(!session){$('auth-section').classList.remove('hidden');$('checkout-section').classList.add('hidden');return}
+
+    $('auth-section').classList.add('hidden');$('checkout-section').classList.remove('hidden');
+    $('user-info-box').innerText=`Zalogowano jako: ${session.user.email}`;
+    if(!cart.length){$('checkout-section').classList.add('hidden');return}
+
+    if(paymentEl){try{paymentEl.destroy()}catch{}paymentEl=null;elements=null}
+
+    if(currentTotal<=0.01){
+      $('stripe-container').classList.add('hidden');$('free-order-container').classList.remove('hidden');return;
+    }
+    $('free-order-container').classList.add('hidden');
+    if(currentTotal<STRIPE_MIN){
+      $('stripe-container').classList.add('hidden');
+      setPayMsg(`Minimalna kwota płatności kartą to ${STRIPE_MIN.toFixed(2)} PLN. Zmień koszyk lub kod rabatowy.`);return;
+    }
+    $('stripe-container').classList.remove('hidden');
+
+    const res=await fetch('/api/create-payment-intent',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        items:cart,userId:session.user.id,
+        couponCode:activeCoupon?activeCoupon.code:null,
+        discountAmount:currentDiscount,expectedTotal:currentTotal
+      })
+    });
+    let data={};
+    if((res.headers.get('content-type')||'').includes('application/json'))data=await res.json();
+    if(!res.ok||!data.clientSecret)throw new Error(data.message||data.error||`Błąd serwera (${res.status})`);
+
+    elements=stripe.elements({clientSecret:data.clientSecret,defaultValues:{billingDetails:{email:session.user.email}}});
+    paymentEl=elements.create('payment',{fields:{billingDetails:{email:'never'}}});
+    $('payment-element').innerHTML='';
+    paymentEl.mount('#payment-element');
+  }catch(err){
+    console.error(err);setPayMsg(err.message||'Nie udało się przygotować płatności.');
+  }finally{
+    busy=false;
+    if(again){again=false;initCheckout()}
+  }
+}
+
+window.processFreeOrder=async function(){
+  const btn=$('free-submit-btn');btn.disabled=true;btn.innerText='Przetwarzanie...';
+  try{
+    const{data:{session}}=await supabaseClient.auth.getSession();
+    if(!session)throw new Error('Sesja wygasła – zaloguj się ponownie.');
+    const res=await fetch('/api/create-free-order',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({items:getCart(),userId:session.user.id,couponCode:activeCoupon?activeCoupon.code:null,discountAmount:currentDiscount,expectedTotal:currentTotal})
+    });
+    let r={};
+    if((res.headers.get('content-type')||'').includes('application/json'))r=await res.json();
+    if(!res.ok)throw new Error(r.error||r.message||'Wystąpił błąd podczas finalizacji darmowego zamówienia.');
+    localStorage.removeItem('cart');
+    showToast('Zamówienie zrealizowane pomyślnie!');
+    setTimeout(()=>location.href='/mojekonto?payment_success=true',1000);
+  }catch(err){
+    showToast(err.message);btn.disabled=false;btn.innerText='Odbierz za darmo';
+  }
+};
+
+$('payment-form').addEventListener('submit',async e=>{
+  e.preventDefault();
+  if(!elements)return setPayMsg('Płatność nie jest jeszcze gotowa, spróbuj za chwilę.');
+  const btn=$('submit-btn');btn.disabled=true;btn.innerText='Przetwarzanie płatności...';setPayMsg('');
+  const{data:{session}}=await supabaseClient.auth.getSession();
+  const{error}=await stripe.confirmPayment({
+    elements,
+    confirmParams:{
+      return_url:location.origin+'/mojekonto?payment_success=true',
+      payment_method_data:{billing_details:{email:session?session.user.email:undefined}}
+    }
+  });
+  if(error){setPayMsg(error.message);btn.disabled=false;btn.innerText='Zapłać teraz'}
+});
+
+document.addEventListener('DOMContentLoaded',async()=>{await renderCart(true);await initCheckout()});
+</script>
 </body>
 </html>
