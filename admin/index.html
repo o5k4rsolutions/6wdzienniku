@@ -1,696 +1,345 @@
 <!DOCTYPE html>
 <html lang="pl">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Panel Admina - 6WDzienniku</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <!-- Biblioteka JSZip do automatycznego pakowania plików i folderów -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.2/jszip.min.js"></script>
-    <link rel="icon" type="image/x-icon" href="https://files-6wdzienniku.vercel.app/content/6wd/logo_favicon_6.svg">
-    <link href="https://fonts.googleapis.com/css2?family=Open+Sans+Condensed:ital,wght@0,300;0,700;1,300&family=Open+Sans:ital,wght@0,300;0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: { brandViolet: '#5B21B6', brandPink: '#EC4899' },
-                    fontFamily: { sans: ['"Open Sans"', 'sans-serif'], condensed: ['"Open Sans Condensed"', 'sans-serif'] },
-                    borderRadius: { 'custom': '10px' }
-                }
-            }
-        }
-    </script>
-    <style>
-        body { font-family: 'Open Sans', sans-serif; background-color: #FAFAFC; color: #1F2937; }
-        h1, h2, h3, .font-condensed { font-family: 'Open Sans Condensed', sans-serif; font-weight: 700; text-transform: uppercase; }
-        .tab-admin.active { background-color: #5B21B6; color: white; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Panel Admina – 6WDzienniku</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.2/jszip.min.js"></script>
+<link rel="icon" href="https://files-6wdzienniku.vercel.app/content/6wd/logo_favicon_6.svg">
+<link href="https://fonts.googleapis.com/css2?family=Open+Sans+Condensed:wght@700&family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<script>
+tailwind.config={theme:{extend:{colors:{v:'#5B21B6',p:'#EC4899',ink:'#14101F'},fontFamily:{sans:['"Open Sans"','sans-serif'],cond:['"Open Sans Condensed"','sans-serif']}}}}
+</script>
+<style>
+body{font-family:'Open Sans',sans-serif;background:#F3F1F8;color:#14101F}
+.cond{font-family:'Open Sans Condensed',sans-serif;text-transform:uppercase;letter-spacing:.02em}
+.inp{width:100%;padding:.6rem .75rem;border:1px solid #DDD8EA;border-radius:.75rem;background:#fff;font-size:.85rem;outline:none;transition:.15s}
+.inp:focus{border-color:#5B21B6;box-shadow:0 0 0 3px #5B21B622}
+.lbl{display:block;font-size:.7rem;font-weight:700;color:#6B6485;margin-bottom:.25rem;text-transform:uppercase;letter-spacing:.04em}
+.card{background:#fff;border-radius:1rem;box-shadow:0 1px 3px #14101F0d,0 8px 24px -12px #5B21B622}
+.btn{padding:.55rem 1rem;border-radius:.75rem;font-weight:700;font-size:.8rem;transition:.15s;cursor:pointer}
+.btn:disabled{opacity:.5;cursor:wait}
+.b-pri{background:linear-gradient(135deg,#5B21B6,#8B3FD9);color:#fff}.b-pri:hover{filter:brightness(1.1)}
+.b-pink{background:#EC4899;color:#fff}.b-ghost{background:#F3F1F8;color:#5B21B6}.b-ghost:hover{background:#E8E2F5}
+.b-red{background:#FEE2E2;color:#B91C1C}.b-red:hover{background:#FECACA}
+.nav{display:flex;align-items:center;gap:.75rem;width:100%;padding:.65rem .9rem;border-radius:.75rem;color:#CFC6EA;font-weight:600;font-size:.88rem;transition:.15s}
+.nav:hover{background:#ffffff14;color:#fff}.nav.on{background:#fff;color:#5B21B6}
+.badge{font-size:.65rem;font-weight:700;padding:.2rem .55rem;border-radius:99px;text-transform:uppercase}
+.st-paid,.st-completed{background:#DCFCE7;color:#15803D}.st-pending{background:#FEF3C7;color:#B45309}.st-cancelled{background:#FEE2E2;color:#B91C1C}.st-approved{background:#DCFCE7;color:#15803D}
+</style>
 </head>
-<body class="min-h-screen flex flex-col justify-between">
+<body>
+<div id="toast" class="fixed top-4 right-4 z-[60] translate-x-[130%] transition-transform duration-300 bg-ink text-white px-5 py-3 rounded-xl shadow-2xl text-sm max-w-xs"></div>
 
-    <div id="toast" class="fixed top-5 right-5 z-50 transform translate-x-full transition-transform duration-300 bg-gray-900 text-white px-5 py-3 rounded-custom shadow-xl border border-purple-500/30 text-sm">
-        <span id="toast-message">Powiadomienie</span>
+<!-- LOGIN -->
+<div id="login-view" class="hidden min-h-screen flex items-center justify-center p-4" style="background:radial-gradient(circle at 20% 10%,#7C3AED 0,#3B0F85 45%,#14101F 100%)">
+  <form onsubmit="doLogin(event)" class="card w-full max-w-sm p-8 space-y-4">
+    <img src="https://files-6wdzienniku.vercel.app/content/6wd/logo_6wdzienn_kolor.png" alt="6 w dzienniku" class="h-14 mx-auto object-contain">
+    <div class="text-center"><h1 class="cond text-2xl">Panel administratora</h1><p class="text-xs text-gray-500">Zaloguj się, aby zarządzać sklepem</p></div>
+    <div><label class="lbl">E-mail</label><input id="l-email" type="email" class="inp" required autocomplete="username"></div>
+    <div><label class="lbl">Hasło</label><input id="l-pass" type="password" class="inp" required autocomplete="current-password"></div>
+    <p id="l-err" class="text-xs text-red-600 font-semibold hidden"></p>
+    <button id="l-btn" class="btn b-pri w-full py-3">Zaloguj się</button>
+  </form>
+</div>
+
+<!-- DENIED -->
+<div id="denied-view" class="hidden min-h-screen flex items-center justify-center p-4">
+  <div class="card p-8 max-w-sm text-center space-y-3">
+    <div class="text-4xl">🔒</div><h2 class="cond text-2xl">Brak uprawnień</h2>
+    <p class="text-sm text-gray-600">Konto <b id="denied-mail"></b> nie ma roli administratora.</p>
+    <button onclick="doLogout()" class="btn b-pri">Wyloguj i zmień konto</button>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app-view" class="hidden min-h-screen lg:flex">
+  <aside class="lg:w-64 lg:min-h-screen lg:sticky lg:top-0 lg:h-screen p-4 flex lg:flex-col gap-2 overflow-x-auto" style="background:linear-gradient(180deg,#3B0F85,#14101F)">
+    <div class="hidden lg:block bg-white rounded-xl p-3 mb-4"><img src="https://files-6wdzienniku.vercel.app/content/6wd/logo_6wdzienn_kolor.png" class="h-10 mx-auto object-contain" alt=""></div>
+    <button class="nav on" data-t="dashboard" onclick="tab('dashboard')">📊 <span>Pulpit</span></button>
+    <button class="nav" data-t="orders" onclick="tab('orders')">🧾 <span>Zamówienia</span></button>
+    <button class="nav" data-t="products" onclick="tab('products')">📦 <span>Produkty</span></button>
+    <button class="nav" data-t="coupons" onclick="tab('coupons')">🏷️ <span>Kody</span></button>
+    <button class="nav" data-t="reviews" onclick="tab('reviews')">⭐ <span>Opinie <b id="rev-badge" class="ml-1 bg-p text-white rounded-full px-1.5 text-[10px] hidden"></b></span></button>
+    <div class="hidden lg:block mt-auto bg-white/10 rounded-xl p-3 text-white">
+      <p class="text-[10px] uppercase text-purple-300 font-bold">Zalogowano jako</p>
+      <p id="who-mail" class="text-sm font-semibold truncate"></p>
+      <span class="badge bg-green-400/20 text-green-300 mt-1 inline-block">admin</span>
+      <button onclick="doLogout()" class="btn w-full mt-3 bg-white/15 text-white hover:bg-white/25">Wyloguj</button>
+    </div>
+  </aside>
+
+  <main class="flex-1 p-4 sm:p-8 min-w-0">
+    <div class="flex items-center justify-between mb-6 gap-3">
+      <h1 id="page-title" class="cond text-3xl">Pulpit</h1>
+      <div class="lg:hidden flex items-center gap-2 text-xs"><span id="who-mail-m" class="font-semibold truncate max-w-[140px]"></span><button onclick="doLogout()" class="btn b-ghost">Wyloguj</button></div>
     </div>
 
-    <!-- Header -->
-    <header class="w-full bg-white border-b border-gray-200 sticky top-0 z-40">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
-            <a href="https://6wdzienniku.vercel.app/">
-                <img src="https://files-6wdzienniku.vercel.app/content/6wd/logo_6wdzienn_kolor.png" alt="6 w dzienniku" class="h-16 object-contain">
-            </a>
-            <span class="text-xs bg-red-100 text-red-700 font-bold px-3 py-1 rounded-full uppercase">Panel Administratora</span>
-        </div>
-    </header>
+    <!-- Pulpit -->
+    <section id="s-dashboard" class="space-y-6">
+      <div id="stats" class="grid grid-cols-2 xl:grid-cols-4 gap-4"></div>
+      <div class="card p-5"><h3 class="cond text-lg mb-3">Ostatnie zamówienia</h3><div id="recent-orders" class="space-y-2"></div></div>
+    </section>
 
-    <!-- Main Content Hidden Until Admin Verification -->
-    <main id="admin-main" class="flex-grow max-w-7xl mx-auto px-4 sm:px-6 py-8 w-full hidden">
-        <!-- Statystyki / Baner -->
-        <div class="bg-purple-900 text-white p-6 rounded-custom shadow-md mb-8 flex flex-col sm:flex-row justify-between items-center gap-4">
-            <div>
-                <h1 class="text-2xl font-condensed">Panel Zarządzania</h1>
-                <p class="text-xs text-purple-200 mt-1">Masz <span id="pending-reviews-count" class="font-bold text-amber-300">0</span> opinii do zatwierdzenia.</p>
+    <!-- Zamówienia -->
+    <section id="s-orders" class="hidden space-y-4">
+      <div class="card p-4 flex flex-col sm:flex-row gap-3">
+        <input id="o-search" oninput="renderOrders()" class="inp" placeholder="Szukaj: numer, imię, e-mail…">
+        <select id="o-filter" onchange="renderOrders()" class="inp sm:w-48"><option value="">Wszystkie statusy</option><option>pending</option><option>paid</option><option>completed</option><option>cancelled</option></select>
+      </div>
+      <div id="orders-list" class="space-y-2"></div>
+    </section>
+
+    <!-- Produkty -->
+    <section id="s-products" class="hidden grid xl:grid-cols-5 gap-6 items-start">
+      <div class="card p-5 xl:col-span-2">
+        <div class="flex justify-between items-center mb-4"><h2 id="pf-title" class="cond text-xl">Nowy produkt</h2><button id="pf-cancel" type="button" onclick="resetProduct()" class="text-xs font-bold text-gray-500 hover:text-red-600 hidden">Anuluj edycję</button></div>
+        <form onsubmit="saveProduct(event)" class="space-y-3">
+          <input type="hidden" id="p-id">
+          <div><label class="lbl">Tytuł</label><input id="p-title" class="inp" required oninput="autoSlug()"></div>
+          <div><label class="lbl">Slug</label><input id="p-slug" class="inp" required></div>
+          <div><label class="lbl">Opis</label><textarea id="p-desc" rows="3" class="inp"></textarea></div>
+          <div class="grid grid-cols-2 gap-3">
+            <div><label class="lbl">Cena (PLN)</label><input id="p-price" type="number" step="0.01" min="0" class="inp" required></div>
+            <div><label class="lbl">Najniższa z 30 dni</label><input id="p-price30" type="number" step="0.01" min="0" class="inp"></div>
+            <div><label class="lbl">Cena promocyjna</label><input id="p-dprice" type="number" step="0.01" min="0" class="inp"></div>
+            <label class="flex items-end gap-2 pb-2 text-sm font-semibold"><input id="p-disc" type="checkbox" class="w-4 h-4 accent-purple-700"> Promocja aktywna</label>
+            <div><label class="lbl">Typ</label><select id="p-type" class="inp"><option value="eproduct">Cyfrowy</option><option value="physical">Fizyczny</option></select></div>
+            <div><label class="lbl">Kategoria</label><input id="p-cat" class="inp"></div>
+          </div>
+          <div><label class="lbl">URL zdjęć (po przecinku)</label><input id="p-images" class="inp"></div>
+          <div class="border-t pt-3 space-y-2">
+            <label class="lbl">Pliki do pobrania</label>
+            <div id="p-existing" class="space-y-1"></div>
+            <div class="grid grid-cols-2 gap-2 text-[11px]">
+              <div><span class="lbl">Wybierz pliki</span><input id="p-files" type="file" multiple class="inp !p-1.5"></div>
+              <div><span class="lbl">Lub cały folder</span><input id="p-folder" type="file" webkitdirectory class="inp !p-1.5"></div>
             </div>
-        </div>
-
-        <!-- Taby -->
-        <div class="flex flex-wrap gap-2 mb-6 border-b pb-3">
-            <button type="button" onclick="switchAdminTab('products')" id="admin-tab-products" class="tab-admin active px-4 py-2 rounded-custom border text-xs font-bold transition">Produkty</button>
-            <button type="button" onclick="switchAdminTab('coupons')" id="admin-tab-coupons" class="tab-admin px-4 py-2 rounded-custom border text-xs font-bold transition">Kody Zniżkowe</button>
-            <button type="button" onclick="switchAdminTab('orders')" id="admin-tab-orders" class="tab-admin px-4 py-2 rounded-custom border text-xs font-bold transition">Zamówienia</button>
-            <button type="button" onclick="switchAdminTab('reviews')" id="admin-tab-reviews" class="tab-admin px-4 py-2 rounded-custom border text-xs font-bold transition">Opinie</button>
-        </div>
-
-        <!-- 1. Produkty -->
-        <section id="sec-products" class="space-y-6">
-            <div class="bg-white p-6 rounded-custom border shadow-sm">
-                <div class="flex justify-between items-center mb-4">
-                    <h2 id="product-form-title" class="text-lg font-condensed">Dodaj Nowy Produkt</h2>
-                    <button type="button" onclick="resetProductForm()" id="cancel-edit-btn" class="text-xs text-gray-500 hover:text-red-600 hidden font-bold">Anuluj edycję</button>
-                </div>
-                <form id="product-form" onsubmit="saveProduct(event)" class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-                    <input type="hidden" id="p-edit-id">
-                    <input type="text" id="p-title" placeholder="Tytuł produktu" class="p-2.5 border rounded-custom" required>
-                    <input type="text" id="p-slug" placeholder="Slug (np. testy-matematyka-klasa-4)" class="p-2.5 border rounded-custom" required>
-                    <textarea id="p-desc" placeholder="Opis produktu" class="p-2.5 border rounded-custom sm:col-span-2"></textarea>
-                    
-                    <input type="number" step="0.01" id="p-price" placeholder="Cena podstawowa (PLN)" class="p-2.5 border rounded-custom" required>
-                    <input type="number" step="0.01" id="p-price-30" placeholder="Cena 30 dni przed obniżką" class="p-2.5 border rounded-custom">
-                    
-                    <div class="flex items-center gap-2">
-                        <input type="checkbox" id="p-is-discount">
-                        <label for="p-is-discount">Promocja włączona</label>
-                    </div>
-                    <input type="number" step="0.01" id="p-discount-price" placeholder="Cena promocyjna (PLN)" class="p-2.5 border rounded-custom">
-
-                    <select id="p-type" class="p-2.5 border rounded-custom">
-                        <option value="eproduct">Cyfrowy (e-produkt / ZIP / Plik)</option>
-                        <option value="physical">Fizyczny</option>
-                    </select>
-                    <input type="text" id="p-category" placeholder="Kategoria" class="p-2.5 border rounded-custom">
-
-                    <input type="text" id="p-images" placeholder="URL Zdjęć (rozdzielone przecinkami)" class="p-2.5 border rounded-custom sm:col-span-2">
-                    
-                    <div class="sm:col-span-2 border-t pt-4 space-y-3">
-                        <label class="font-bold text-gray-700 block">Wgraj pliki lub cały folder (wielokrotny wybór / foldery):</label>
-                        <input type="file" id="p-file-input" multiple webkitdirectory directory class="p-2 border rounded-custom w-full bg-gray-50">
-                        <p class="text-[11px] text-gray-500">Jeśli wybierzesz wiele plików lub folder, system automatycznie spakuje je do jednego pliku ZIP przed wysyłką.</p>
-                        <div id="upload-progress" class="text-xs text-purple-700 font-semibold hidden">Przetwarzanie i wgrywanie...</div>
-                    </div>
-
-                    <button type="submit" id="save-product-btn" class="sm:col-span-2 py-3 bg-brandViolet text-white font-bold rounded-custom hover:bg-purple-800 transition">Zapisz produkt</button>
-                </form>
-            </div>
-
-            <div class="bg-white p-6 rounded-custom border shadow-sm">
-                <h3 class="font-condensed text-lg mb-3">Lista Produktów</h3>
-                <div id="admin-products-list" class="space-y-2"></div>
-            </div>
-        </section>
-
-        <!-- 2. Kody Zniżkowe -->
-        <section id="sec-coupons" class="space-y-6 hidden">
-            <div class="bg-white p-6 rounded-custom border shadow-sm">
-                <h2 class="text-lg font-condensed mb-4">Zaawansowany Kreator Kodów Zniżkowych</h2>
-                <form id="coupon-form" onsubmit="saveCoupon(event)" class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-                    <div>
-                        <label class="block font-bold text-gray-700 mb-1">Kod (np. LATO2026)*</label>
-                        <input type="text" id="c-code" placeholder="LATO2026" class="p-2.5 border rounded-custom uppercase w-full font-bold" required>
-                    </div>
-                    <div>
-                        <label class="block font-bold text-gray-700 mb-1">Typ rabatu*</label>
-                        <select id="c-type" onchange="handleCouponTypeChange()" class="p-2.5 border rounded-custom w-full bg-white">
-                            <option value="percent">Procentowy (%)</option>
-                            <option value="amount">Kwotowy stały (PLN)</option>
-                            <option value="threshold_reward">Stopniowy (np. X zł zniżki za każde Y zł wydane)</option>
-                        </select>
-                    </div>
-
-                    <div id="c-value-wrapper">
-                        <label id="c-value-label" class="block font-bold text-gray-700 mb-1">Wartość zniżki (np. 20 dla 20% lub 15 dla 15 PLN)*</label>
-                        <input type="number" step="0.01" id="c-value" placeholder="20" class="p-2.5 border rounded-custom w-full" required>
-                    </div>
-
-                    <div id="c-threshold-wrapper" class="hidden sm:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4 bg-purple-50 p-3 rounded-custom border border-purple-200">
-                        <div>
-                            <label class="block font-bold text-purple-900 mb-1">Za każde wydane (kwota bazowa w PLN):</label>
-                            <input type="number" step="0.01" id="c-step-threshold" placeholder="100" class="p-2.5 border rounded-custom w-full bg-white">
-                        </div>
-                        <div>
-                            <label class="block font-bold text-purple-900 mb-1">Przyznaj zniżkę (rabat w PLN):</label>
-                            <input type="number" step="0.01" id="c-step-reward" placeholder="10" class="p-2.5 border rounded-custom w-full bg-white">
-                        </div>
-                        <p class="sm:col-span-2 text-[11px] text-purple-700">Przykład: Jeśli klient wydaje 300 zł, a próg to 100 zł za każde 10 zł zniżki, otrzyma 30 zł rabatu.</p>
-                    </div>
-
-                    <div>
-                        <label class="block font-bold text-gray-700 mb-1">Minimalna kwota zamówienia (PLN)</label>
-                        <input type="number" step="0.01" id="c-min-order" placeholder="np. 50.00" class="p-2.5 border rounded-custom w-full">
-                    </div>
-
-                    <div>
-                        <label class="block font-bold text-gray-700 mb-1">Limit użyć (ogólny)</label>
-                        <input type="number" id="c-limit" placeholder="np. 100" class="p-2.5 border rounded-custom w-full">
-                    </div>
-
-                    <div>
-                        <label class="block font-bold text-gray-700 mb-1">Ważny do</label>
-                        <input type="datetime-local" id="c-valid" class="p-2.5 border rounded-custom w-full">
-                    </div>
-
-                    <div>
-                        <label class="block font-bold text-gray-700 mb-1">Dotyczy wybranej kategorii (opcjonalnie)</label>
-                        <input type="text" id="c-category" placeholder="np. Matematyka" class="p-2.5 border rounded-custom w-full">
-                    </div>
-
-                    <div class="sm:col-span-2">
-                        <label class="block font-bold text-gray-700 mb-1">Dotyczy wybranej listy produktów (ID oddzielone przecinkami, opcjonalnie)</label>
-                        <input type="text" id="c-product-ids" placeholder="np. uuid-1, uuid-2" class="p-2.5 border rounded-custom w-full">
-                    </div>
-
-                    <button type="submit" class="sm:col-span-2 py-3 bg-brandPink text-white font-bold rounded-custom hover:opacity-90 transition">Stwórz kod</button>
-                </form>
-            </div>
-            <div class="bg-white p-6 rounded-custom border shadow-sm">
-                <h3 class="font-condensed text-lg mb-3">Aktywne Kody Zniżkowe</h3>
-                <div id="admin-coupons-list" class="space-y-2"></div>
-            </div>
-        </section>
-
-        <!-- 3. Zamówienia -->
-        <section id="sec-orders" class="space-y-6 hidden">
-            <div class="bg-white p-6 rounded-custom border shadow-sm">
-                <h2 class="text-lg font-condensed mb-4">Wszystkie Zamówienia</h2>
-                <div id="admin-orders-list" class="space-y-3"></div>
-            </div>
-        </section>
-
-        <!-- 4. Opinie -->
-        <section id="sec-reviews" class="space-y-6 hidden">
-            <div class="bg-white p-6 rounded-custom border shadow-sm">
-                <h2 class="text-lg font-condensed mb-4">Moderacja Opinii</h2>
-                <div id="admin-reviews-list" class="space-y-3"></div>
-            </div>
-        </section>
-    </main>
-
-    <script>
-        const SUPABASE_URL = "https://fxksikgdberwgttvglko.supabase.co";
-        const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ4a3Npa2dkYmVyd2d0dHZnbGtvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA0MzU3NzYsImV4cCI6MjEwNjAxMTc3Nn0.sKf3vvVbaae5-mdg5zwqrgUl6AkXjENanwhDWbH_PXw";
-        
-        let dbClient;
-        try {
-            dbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-        } catch (initErr) {
-            console.error("Błąd inicjalizacji klienta Supabase:", initErr);
-        }
-
-        let allProductsCache = [];
-
-        function showToast(m) {
-            const t = document.getElementById('toast');
-            if (!t) return;
-            document.getElementById('toast-message').innerText = m;
-            t.classList.remove('translate-x-full');
-            setTimeout(() => t.classList.add('translate-x-full'), 3000);
-        }
-
-        window.switchAdminTab = function(name) {
-            ['products', 'coupons', 'orders', 'reviews'].forEach(s => {
-                const sec = document.getElementById(`sec-${s}`);
-                const tab = document.getElementById(`admin-tab-${s}`);
-                if (sec) sec.classList.add('hidden');
-                if (tab) tab.classList.remove('active');
-            });
-            const targetSec = document.getElementById(`sec-${name}`);
-            const targetTab = document.getElementById(`admin-tab-${name}`);
-            if (targetSec) targetSec.classList.remove('hidden');
-            if (targetTab) targetTab.classList.add('active');
-        };
-
-        window.handleCouponTypeChange = function() {
-            const type = document.getElementById('c-type').value;
-            const thresholdWrapper = document.getElementById('c-threshold-wrapper');
-            const valueWrapper = document.getElementById('c-value-wrapper');
-            const valueInput = document.getElementById('c-value');
-            const valueLabel = document.getElementById('c-value-label');
-
-            if (type === 'threshold_reward') {
-                thresholdWrapper.classList.remove('hidden');
-                valueWrapper.classList.add('hidden');
-                valueInput.required = false;
-            } else {
-                thresholdWrapper.classList.add('hidden');
-                valueWrapper.classList.remove('hidden');
-                valueInput.required = true;
-                if (type === 'percent') {
-                    valueLabel.innerText = 'Wartość zniżki w % (np. 20)';
-                    valueInput.placeholder = '20';
-                } else if (type === 'amount') {
-                    valueLabel.innerText = 'Wartość zniżki w PLN (np. 15)';
-                    valueInput.placeholder = '15';
-                }
-            }
-        };
-
-        async function checkAdmin() {
-            if (!dbClient) {
-                alert("Błąd krytyczny: Brak połączenia z bazą danych.");
-                return;
-            }
-            try {
-                const { data: { session }, error: sessionError } = await dbClient.auth.getSession();
-                
-                if (sessionError || !session) { 
-                    window.location.href = '/api-login/?login'; 
-                    return; 
-                }
-
-                const { data: profile, error: profileError } = await dbClient
-                    .from('profiles')
-                    .select('role')
-                    .eq('id', session.user.id)
-                    .maybeSingle();
-
-                if (profileError || profile?.role !== 'admin') {
-                    // Safe custom modal/toast notice instead of alert() if preferred, but alert is acceptable for hard auth redirect protection
-                    alert('Brak uprawnień administratora.');
-                    window.location.href = '/mojekonto';
-                    return;
-                }
-
-                const mainEl = document.getElementById('admin-main');
-                if (mainEl) mainEl.classList.remove('hidden');
-
-                loadAdminProducts();
-                loadAdminCoupons();
-                loadAdminOrders();
-                loadAdminReviews();
-            } catch (err) {
-                console.error("Błąd autoryzacji:", err);
-                window.location.href = '/api-login/?login';
-            }
-        }
-
-        async function uploadProductFiles(files, productSlug) {
-            const progressEl = document.getElementById('upload-progress');
-            if (progressEl) {
-                progressEl.classList.remove('hidden');
-                progressEl.innerText = 'Przygotowywanie i pakowanie plików...';
-            }
-
-            let fileToUpload = null;
-            let finalFileName = '';
-
-            const hasMultiple = files.length > 1;
-            const hasFolder = Array.from(files).some(f => f.webkitRelativePath && f.webkitRelativePath.includes('/'));
-
-            if (hasMultiple || hasFolder) {
-                const zip = new JSZip();
-                for (let i = 0; i < files.length; i++) {
-                    const file = files[i];
-                    const path = file.webkitRelativePath || file.name;
-                    zip.file(path, file);
-                }
-                
-                if (progressEl) progressEl.innerText = 'Kompresja do pliku ZIP...';
-                const content = await zip.generateAsync({ type: 'blob' });
-                finalFileName = `${productSlug}_files.zip`;
-                fileToUpload = new File([content], finalFileName, { type: 'application/zip' });
-            } else {
-                fileToUpload = files[0];
-                finalFileName = files[0].name;
-            }
-
-            const filePath = `${productSlug}/${Date.now()}_${finalFileName}`;
-
-            if (progressEl) progressEl.innerText = 'Wysyłanie pliku do magazynu...';
-
-            const { error } = await dbClient.storage
-                .from('product-files')
-                .upload(filePath, fileToUpload, { cacheControl: '3600', upsert: true });
-
-            if (error) {
-                console.error("Błąd przesyłania: ", error);
-                if (progressEl) progressEl.classList.add('hidden');
-                throw error;
-            }
-
-            const { data: publicUrlData } = dbClient.storage
-                .from('product-files')
-                .getPublicUrl(filePath);
-
-            if (progressEl) progressEl.classList.add('hidden');
-
-            return [{
-                name: finalFileName,
-                path: filePath,
-                url: publicUrlData.publicUrl,
-                type: finalFileName.split('.').pop()
-            }];
-        }
-
-        window.saveProduct = async function(e) {
-            e.preventDefault();
-            const btn = document.getElementById('save-product-btn');
-            btn.disabled = true;
-            btn.innerText = 'Zapisywanie...';
-
-            try {
-                const editId = document.getElementById('p-edit-id').value;
-                const slug = document.getElementById('p-slug').value.trim();
-                const fileInput = document.getElementById('p-file-input');
-                
-                let downloadFiles = [];
-                if (editId) {
-                    const existingProd = allProductsCache.find(p => p.id == editId);
-                    if (existingProd) downloadFiles = existingProd.download_files || [];
-                }
-
-                if (fileInput.files.length > 0) {
-                    const newFiles = await uploadProductFiles(fileInput.files, slug);
-                    downloadFiles = [...downloadFiles, ...newFiles];
-                }
-
-                const productData = {
-                    title: document.getElementById('p-title').value,
-                    slug: slug,
-                    description: document.getElementById('p-desc').value,
-                    price: parseFloat(document.getElementById('p-price').value),
-                    price_before_30_days: parseFloat(document.getElementById('p-price-30').value || 0),
-                    is_discounted: document.getElementById('p-is-discount').checked,
-                    discount_price: parseFloat(document.getElementById('p-discount-price').value || 0),
-                    product_type: document.getElementById('p-type').value,
-                    category: document.getElementById('p-category').value,
-                    images: document.getElementById('p-images').value ? document.getElementById('p-images').value.split(',').map(s => s.trim()) : [],
-                    download_files: downloadFiles
-                };
-
-                let error;
-                if (editId) {
-                    const res = await dbClient.from('products').update(productData).eq('id', editId);
-                    error = res.error;
-                } else {
-                    const res = await dbClient.from('products').insert(productData);
-                    error = res.error;
-                }
-
-                if (!error) { 
-                    showToast(editId ? 'Produkt zaktualizowany!' : 'Produkt dodany pomyślnie!'); 
-                    resetProductForm();
-                    loadAdminProducts(); 
-                } else {
-                    showToast('Błąd zapisu produktu: ' + error.message);
-                }
-            } catch (err) {
-                console.error("Błąd zapisu:", err);
-                showToast('Wystąpił nieoczekiwany błąd podczas zapisywania.');
-            } finally {
-                btn.disabled = false;
-                btn.innerText = 'Zapisz produkt';
-            }
-        };
-
-        window.resetProductForm = function() {
-            document.getElementById('product-form').reset();
-            document.getElementById('p-edit-id').value = '';
-            document.getElementById('product-form-title').innerText = 'Dodaj Nowy Produkt';
-            document.getElementById('save-product-btn').innerText = 'Zapisz produkt';
-            document.getElementById('cancel-edit-btn').classList.add('hidden');
-        };
-
-        window.editProduct = function(id) {
-            const p = allProductsCache.find(item => item.id == id);
-            if (!p) return;
-
-            document.getElementById('p-edit-id').value = p.id;
-            document.getElementById('p-title').value = p.title || '';
-            document.getElementById('p-slug').value = p.slug || '';
-            document.getElementById('p-desc').value = p.description || '';
-            document.getElementById('p-price').value = p.price || '';
-            document.getElementById('p-price-30').value = p.price_before_30_days || '';
-            document.getElementById('p-is-discount').checked = !!p.is_discounted;
-            document.getElementById('p-discount-price').value = p.discount_price || '';
-            document.getElementById('p-type').value = p.product_type || 'eproduct';
-            document.getElementById('p-category').value = p.category || '';
-            document.getElementById('p-images').value = (p.images || []).join(', ');
-
-            document.getElementById('product-form-title').innerText = 'Edytuj Produkt: ' + p.title;
-            document.getElementById('save-product-btn').innerText = 'Zaktualizuj produkt';
-            document.getElementById('cancel-edit-btn').classList.remove('hidden');
-
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        };
-
-        async function loadAdminProducts() {
-            try {
-                const { data } = await dbClient.from('products').select('*').order('created_at', { ascending: false });
-                allProductsCache = data || [];
-                const listEl = document.getElementById('admin-products-list');
-                if (!listEl) return;
-
-                listEl.innerHTML = allProductsCache.map(p => `
-                    <div class="p-3 border rounded-custom flex justify-between items-center text-xs bg-gray-50">
-                        <div>
-                            <span class="font-bold text-gray-900">${p.title}</span>
-                            <span class="text-gray-400 block">Cena: ${p.price} PLN ${p.is_discounted ? `(Promocja: ${p.discount_price} PLN)` : ''}</span>
-                            <span class="text-purple-600 font-semibold block">ID: ${p.id}</span>
-                            <span class="text-purple-600 font-semibold block">Liczba plików: ${(p.download_files || []).length}</span>
-                        </div>
-                        <div class="space-x-2">
-                            <button type="button" onclick="editProduct('${p.id}')" class="text-brandViolet hover:underline font-bold">Edytuj</button>
-                            <button type="button" onclick="deleteProduct('${p.id}')" class="text-red-500 hover:underline font-bold">Usuń</button>
-                        </div>
-                    </div>
-                `).join('');
-            } catch (err) {
-                console.error("Błąd pobierania produktów:", err);
-            }
-        }
-
-        window.deleteProduct = async function(id) {
-            if (!window.confirm('Czy na pewno chcesz usunąć ten produkt?')) return;
-            await dbClient.from('products').delete().eq('id', id);
-            showToast('Produkt usunięty.');
-            loadAdminProducts();
-        };
-
-        window.saveCoupon = async function(e) {
-            e.preventDefault();
-            try {
-                const type = document.getElementById('c-type').value;
-                let value = null;
-                let minOrder = parseFloat(document.getElementById('c-min-order').value) || null;
-                let stepThreshold = null;
-                let stepReward = null;
-
-                if (type === 'threshold_reward') {
-                    stepThreshold = parseFloat(document.getElementById('c-step-threshold').value);
-                    stepReward = parseFloat(document.getElementById('c-step-reward').value);
-                    if (!stepThreshold || !stepReward) {
-                        showToast('Podaj poprawny próg i kwotę zniżki dla kodu stopniowego.');
-                        return;
-                    }
-                } else {
-                    value = parseFloat(document.getElementById('c-value').value);
-                }
-
-                const productIdsRaw = document.getElementById('c-product-ids').value.trim();
-                const productIds = productIdsRaw ? productIdsRaw.split(',').map(s => s.trim()).filter(Boolean) : [];
-
-                const couponData = {
-                    code: document.getElementById('c-code').value.toUpperCase().trim(),
-                    discount_type: type,
-                    discount_value: value,
-                    min_order_amount: minOrder,
-                    step_threshold: stepThreshold,
-                    step_reward: stepReward,
-                    category_restriction: document.getElementById('c-category').value.trim() || null,
-                    product_ids: productIds.length > 0 ? productIds : null,
-                    usage_limit: document.getElementById('c-limit').value ? parseInt(document.getElementById('c-limit').value) : null,
-                    valid_until: document.getElementById('c-valid').value || null
-                };
-
-                const { error } = await dbClient.from('coupons').insert(couponData);
-                if (!error) {
-                    showToast('Zaawansowany kod rabatowy został utworzony!');
-                    document.getElementById('coupon-form').reset();
-                    handleCouponTypeChange();
-                    loadAdminCoupons();
-                } else {
-                    showToast('Błąd podczas zapisywania kodu: ' + error.message);
-                }
-            } catch (err) {
-                console.error("Błąd podczas zapisywania kodu:", err);
-                showToast('Wystąpił błąd podczas zapisywania kodu zniżkowego.');
-            }
-        };
-
-        async function loadAdminCoupons() {
-            try {
-                const { data } = await dbClient.from('coupons').select('*').order('created_at', { ascending: false });
-                const listEl = document.getElementById('admin-coupons-list');
-                if (!listEl) return;
-
-                listEl.innerHTML = (data || []).map(c => {
-                    let desc = '';
-                    if (c.discount_type === 'percent') desc = `${c.discount_value}%`;
-                    else if (c.discount_type === 'amount') desc = `${c.discount_value} PLN`;
-                    else if (c.discount_type === 'threshold_reward') desc = `${c.step_reward || 0} zł zniżki za każde ${c.step_threshold || 0} zł`;
-
-                    return `
-                        <div class="p-3 border rounded-custom text-xs flex justify-between items-center bg-gray-50">
-                            <div>
-                                <span class="font-bold text-brandViolet text-sm">${c.code}</span> — <span class="font-semibold text-gray-700">${desc}</span>
-                                <div class="text-gray-500 mt-0.5 space-x-2">
-                                    ${c.min_order_amount ? `<span>Min. zamówienie: <b>${c.min_order_amount} PLN</b></span>` : ''}
-                                    ${c.category_restriction ? `<span>Kat: <b>${c.category_restriction}</b></span>` : ''}
-                                    ${c.product_ids ? `<span>Wybrane produkty (ID)</span>` : ''}
-                                    <span>Wygaśnie: ${c.valid_until ? new Date(c.valid_until).toLocaleString('pl-PL') : 'Bez limitu'}</span>
-                                </div>
-                            </div>
-                            <button type="button" onclick="deleteCoupon('${c.id}')" class="text-red-500 font-bold hover:underline">Usuń</button>
-                        </div>
-                    `;
-                }).join('');
-            } catch (err) {
-                console.error("Błąd pobierania kodów:", err);
-            }
-        }
-
-        window.deleteCoupon = async function(id) {
-            await dbClient.from('coupons').delete().eq('id', id);
-            showToast('Kod usunięty.');
-            loadAdminCoupons();
-        };
-
-        async function loadAdminReviews() {
-            try {
-                const { data } = await dbClient.from('reviews').select('*').order('created_at', { ascending: false });
-                const pending = (data || []).filter(r => r.status === 'pending').length;
-                
-                const pendingEl = document.getElementById('pending-reviews-count');
-                if (pendingEl) pendingEl.innerText = pending;
-
-                const listEl = document.getElementById('admin-reviews-list');
-                if (!listEl) return;
-
-                listEl.innerHTML = (data || []).map(r => `
-                    <div class="p-3 border rounded-custom text-xs flex justify-between items-center bg-gray-50">
-                        <div>
-                            <span class="font-bold text-gray-800">${r.author_name || 'Anonim'}</span> (${r.rating}★): ${r.comment}
-                            <span class="block text-gray-400 mt-0.5">Status: <b class="uppercase">${r.status}</b></span>
-                        </div>
-                        <div class="space-x-2">
-                            ${r.status !== 'approved' ? `<button type="button" onclick="approveReview('${r.id}')" class="text-green-600 font-bold hover:underline">Zatwierdź</button>` : ''}
-                            <button type="button" onclick="deleteReview('${r.id}')" class="text-red-600 font-bold hover:underline">Usuń</button>
-                        </div>
-                    </div>
-                `).join('');
-            } catch (err) {
-                console.error("Błąd pobierania opinii:", err);
-            }
-        }
-
-        window.approveReview = async function(id) {
-            await dbClient.from('reviews').update({ status: 'approved' }).eq('id', id);
-            showToast('Opinia zatwierdzona!');
-            loadAdminReviews();
-        };
-
-        window.deleteReview = async function(id) {
-            await dbClient.from('reviews').delete().eq('id', id);
-            showToast('Opinia usunięta.');
-            loadAdminReviews();
-        };
-
-        async function loadAdminOrders() {
-            try {
-                const { data } = await dbClient.from('orders').select('*').order('created_at', { ascending: false });
-                const listEl = document.getElementById('admin-orders-list');
-                if (!listEl) return;
-
-                listEl.innerHTML = (data || []).map(o => {
-                    let itemsHtml = '';
-                    try {
-                        let parsedItems = typeof o.items === 'string' ? JSON.parse(o.items) : (o.items || []);
-                        itemsHtml = parsedItems.map(item => `
-                            <div class="text-gray-600 pl-2 border-l-2 border-purple-300 mt-1">
-                                • ${item.title || item.name || 'Produkt'} — ${item.price} PLN (Ilość: ${item.quantity || 1})
-                            </div>
-                        `).join('');
-                    } catch(e) {
-                        itemsHtml = '<div class="text-gray-400 pl-2">Brak szczegółów pozycji</div>';
-                    }
-
-                    const isPaid = o.status === 'paid' || o.status === 'completed';
-
-                    let customerName = o.customer_name || 
-                                       (o.first_name ? `${o.first_name} ${o.last_name || ''}`.trim() : null) || 
-                                       o.name || 
-                                       o.billing_name || 
-                                       'Klient nieznany';
-
-                    let customerEmail = o.customer_email || 
-                                        o.email || 
-                                        o.user_email || 
-                                        'Brak emaila';
-
-                    return `
-                        <div class="p-3 border rounded-custom text-xs bg-gray-50 space-y-2">
-                            <div class="flex justify-between items-start">
-                                <div>
-                                    <span class="font-bold text-gray-900">Zamówienie #${o.order_number || o.id}</span>
-                                    <span class="block text-purple-900 font-semibold mt-0.5">Klient: ${customerName} (${customerEmail})</span>
-                                    <span class="block text-gray-400">Data: ${new Date(o.created_at).toLocaleString('pl-PL')} | Razem: <b>${parseFloat(o.total_amount || o.amount || 0).toFixed(2)} PLN</b></span>
-                                </div>
-                                <div class="text-right">
-                                    <span class="font-bold uppercase px-2 py-1 rounded text-[10px] ${isPaid ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}">${o.status}</span>
-                                </div>
-                            </div>
-                            <div class="bg-white p-2 rounded border border-gray-100">
-                                <span class="font-bold text-gray-700 block mb-1">Zakupione produkty:</span>
-                                ${itemsHtml}
-                            </div>
-                            <div class="flex justify-end gap-2 pt-1">
-                                ${!isPaid ? `<button type="button" onclick="updateOrderStatus('${o.id}', 'paid')" class="bg-green-600 text-white px-3 py-1 rounded font-bold hover:bg-green-700 transition">Oznacz jako opłacone</button>` : ''}
-                                <button type="button" onclick="deleteOrder('${o.id}')" class="bg-red-50 text-red-600 px-3 py-1 rounded font-bold hover:bg-red-100 transition">Usuń zamówienie</button>
-                            </div>
-                        </div>
-                    `;
-                }).join('');
-            } catch (err) {
-                console.error("Błąd pobierania zamówień:", err);
-            }
-        }
-
-        window.updateOrderStatus = async function(id, newStatus) {
-            if (!window.confirm('Czy na pewno chcesz oznaczyć to zamówienie jako opłacone? Klient otrzyma dostęp do plików na koncie.')) return;
-            const { error } = await dbClient.from('orders').update({ status: newStatus }).eq('id', id);
-            if (!error) {
-                showToast('Zamówienie oznaczone jako opłacone!');
-                loadAdminOrders();
-            } else {
-                showToast('Błąd aktualizacji statusu: ' + error.message);
-            }
-        };
-
-        window.deleteOrder = async function(id) {
-            if (!window.confirm('Czy na pewno chcesz usunąć to zamówienie?')) return;
-            const { error } = await dbClient.from('orders').delete().eq('id', id);
-            if (!error) {
-                showToast('Zamówienie zostało usunięte.');
-                loadAdminOrders();
-            } else {
-                showToast('Błąd usuwania: ' + error.message);
-            }
-        };
-
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', checkAdmin);
-        } else {
-            checkAdmin();
-        }
-    </script>
+            <p class="text-[11px] text-gray-500">Wiele plików lub folder zostaną spakowane do jednego ZIP-a.</p>
+            <div id="p-prog" class="text-xs font-bold text-v hidden"></div>
+          </div>
+          <button id="p-save" class="btn b-pri w-full py-3">Zapisz produkt</button>
+        </form>
+      </div>
+      <div class="card p-5 xl:col-span-3"><h3 class="cond text-xl mb-3">Lista produktów <span id="p-count" class="text-gray-400"></span></h3><div id="products-list" class="space-y-2"></div></div>
+    </section>
+
+    <!-- Kody -->
+    <section id="s-coupons" class="hidden grid xl:grid-cols-5 gap-6 items-start">
+      <div class="card p-5 xl:col-span-2">
+        <h2 class="cond text-xl mb-4">Nowy kod zniżkowy</h2>
+        <form onsubmit="saveCoupon(event)" class="space-y-3">
+          <div class="grid grid-cols-2 gap-3">
+            <div><label class="lbl">Kod</label><input id="c-code" class="inp uppercase font-bold" required placeholder="LATO2026"></div>
+            <div><label class="lbl">Typ</label><select id="c-type" onchange="couponType()" class="inp"><option value="percent">Procentowy</option><option value="amount">Kwotowy</option><option value="threshold_reward">Stopniowy</option></select></div>
+          </div>
+          <div id="c-val-w"><label id="c-val-l" class="lbl">Wartość (%)</label><input id="c-value" type="number" step="0.01" min="0" class="inp"></div>
+          <div id="c-thr-w" class="hidden grid grid-cols-2 gap-3 bg-purple-50 border border-purple-200 rounded-xl p-3">
+            <div><label class="lbl">Za każde (PLN)</label><input id="c-thr" type="number" step="0.01" min="0" class="inp"></div>
+            <div><label class="lbl">Rabat (PLN)</label><input id="c-rew" type="number" step="0.01" min="0" class="inp"></div>
+            <p class="col-span-2 text-[11px] text-purple-700">Np. 10 zł za każde 100 zł: zakupy za 300 zł = 30 zł rabatu.</p>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div><label class="lbl">Min. zamówienie</label><input id="c-min" type="number" step="0.01" min="0" class="inp"></div>
+            <div><label class="lbl">Limit użyć</label><input id="c-limit" type="number" min="1" class="inp"></div>
+            <div><label class="lbl">Ważny do</label><input id="c-valid" type="datetime-local" class="inp"></div>
+            <div><label class="lbl">Kategoria</label><input id="c-cat" class="inp"></div>
+          </div>
+          <div><label class="lbl">ID produktów (po przecinku)</label><input id="c-pids" class="inp" placeholder="uuid-1, uuid-2"></div>
+          <button class="btn b-pink w-full py-3">Utwórz kod</button>
+        </form>
+      </div>
+      <div class="card p-5 xl:col-span-3"><h3 class="cond text-xl mb-3">Kody</h3><div id="coupons-list" class="space-y-2"></div></div>
+    </section>
+
+    <!-- Opinie -->
+    <section id="s-reviews" class="hidden"><div class="card p-5"><div id="reviews-list" class="space-y-2"></div></div></section>
+  </main>
+</div>
+
+<!-- MODAL -->
+<div id="modal" class="hidden fixed inset-0 z-50 bg-ink/60 backdrop-blur-sm flex items-start sm:items-center justify-center p-3 overflow-y-auto" onclick="if(event.target===this)closeModal()">
+  <div id="modal-box" class="card w-full max-w-2xl p-6 my-4"></div>
+</div>
+
+<script>
+const SB_URL="https://fxksikgdberwgttvglko.supabase.co";
+const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ4a3Npa2dkYmVyd2d0dHZnbGtvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA0MzU3NzYsImV4cCI6MjEwNjAxMTc3Nn0.sKf3vvVbaae5-mdg5zwqrgUl6AkXjENanwhDWbH_PXw";
+const db=window.supabase.createClient(SB_URL,SB_KEY);
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const pln=n=>(parseFloat(n)||0).toLocaleString('pl-PL',{style:'currency',currency:'PLN'});
+const dt=d=>d?new Date(d).toLocaleString('pl-PL'):'—';
+const num=v=>v===''||v==null?null:parseFloat(v);
+let P=[],O=[],C=[],R=[],editFiles=[],toastT;
+const titles={dashboard:'Pulpit',orders:'Zamówienia',products:'Produkty',coupons:'Kody zniżkowe',reviews:'Opinie'};
+
+function toast(m){const t=$('toast');t.textContent=m;t.classList.remove('translate-x-[130%]');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.add('translate-x-[130%]'),3200)}
+function show(v){['login-view','denied-view','app-view'].forEach(x=>$(x).classList.toggle('hidden',x!==v))}
+function tab(n){
+  Object.keys(titles).forEach(k=>$('s-'+k).classList.add('hidden'));
+  $('s-'+n).classList.remove('hidden');$('page-title').textContent=titles[n];
+  document.querySelectorAll('.nav').forEach(b=>b.classList.toggle('on',b.dataset.t===n));
+}
+function closeModal(){$('modal').classList.add('hidden')}
+function openModal(h){$('modal-box').innerHTML=h;$('modal').classList.remove('hidden')}
+async function q(p,label){const{data,error}=await p;if(error){console.error(label,error);toast('Błąd ('+label+'): '+error.message);return null}return data}
+
+/* ---- AUTH ---- */
+async function doLogin(e){
+  e.preventDefault();const b=$('l-btn'),er=$('l-err');b.disabled=true;b.textContent='Logowanie…';er.classList.add('hidden');
+  const{error}=await db.auth.signInWithPassword({email:$('l-email').value.trim(),password:$('l-pass').value});
+  b.disabled=false;b.textContent='Zaloguj się';
+  if(error){er.textContent=error.message.includes('Invalid')?'Nieprawidłowy e-mail lub hasło.':error.message;er.classList.remove('hidden');return}
+  init();
+}
+async function doLogout(){await db.auth.signOut();show('login-view')}
+async function init(){
+  const{data:{session}}=await db.auth.getSession();
+  if(!session){show('login-view');return}
+  const email=session.user.email||'';
+  const{data:prof}=await db.from('profiles').select('role').eq('id',session.user.id).maybeSingle();
+  if(prof?.role!=='admin'){$('denied-mail').textContent=email;show('denied-view');return}
+  $('who-mail').textContent=email;$('who-mail-m').textContent=email;
+  show('app-view');tab('dashboard');
+  await Promise.all([loadProducts(),loadCoupons(),loadOrders(),loadReviews()]);renderDashboard();
+}
+db.auth.onAuthStateChange(ev=>{if(ev==='SIGNED_OUT')show('login-view')});
+
+/* ---- DASHBOARD ---- */
+const isPaid=o=>o.status==='paid'||o.status==='completed';
+const oAmount=o=>parseFloat(o.total_amount??o.amount??0)||0;
+const oName=o=>o.customer_name||(o.first_name?`${o.first_name} ${o.last_name||''}`.trim():null)||o.name||o.billing_name||'Klient nieznany';
+const oMail=o=>o.customer_email||o.email||o.user_email||'Brak e-maila';
+function oItems(o){try{const i=typeof o.items==='string'?JSON.parse(o.items):o.items;return Array.isArray(i)?i:[]}catch{return[]}}
+function renderDashboard(){
+  const paid=O.filter(isPaid),rev=paid.reduce((s,o)=>s+oAmount(o),0);
+  const pend=O.filter(o=>o.status==='pending').length,rv=R.filter(r=>r.status==='pending').length;
+  const card=(i,l,v,c)=>`<div class="card p-5"><div class="text-2xl">${i}</div><p class="cond text-3xl mt-1 ${c}">${v}</p><p class="text-xs text-gray-500 font-semibold">${l}</p></div>`;
+  $('stats').innerHTML=card('💰','Przychód (opłacone)',pln(rev),'text-v')+card('🧾','Wszystkie zamówienia',O.length,'')+card('⏳','Oczekujące zamówienia',pend,'text-amber-600')+card('⭐','Opinie do zatwierdzenia',rv,'text-p');
+  $('recent-orders').innerHTML=O.slice(0,5).map(orderRow).join('')||'<p class="text-sm text-gray-400">Brak zamówień.</p>';
+}
+
+/* ---- ORDERS ---- */
+function orderRow(o){return `<button onclick="openOrder('${esc(o.id)}')" class="w-full text-left flex flex-wrap items-center justify-between gap-2 p-3 rounded-xl border border-gray-100 hover:border-v hover:bg-purple-50/50 transition">
+  <div class="min-w-0"><p class="font-bold text-sm">#${esc(o.order_number||String(o.id).slice(0,8))} <span class="font-normal text-gray-500">· ${esc(oName(o))}</span></p><p class="text-xs text-gray-400 truncate">${esc(oMail(o))} · ${dt(o.created_at)}</p></div>
+  <div class="flex items-center gap-3"><b class="text-sm">${pln(oAmount(o))}</b><span class="badge st-${esc(o.status)}">${esc(o.status)}</span><span class="text-v text-xs font-bold">Szczegóły →</span></div></button>`}
+async function loadOrders(){const d=await q(db.from('orders').select('*').order('created_at',{ascending:false}),'zamówienia');O=d||[];renderOrders()}
+function renderOrders(){
+  const s=$('o-search').value.toLowerCase(),f=$('o-filter').value;
+  const l=O.filter(o=>(!f||o.status===f)&&(!s||[o.order_number,o.id,oName(o),oMail(o)].join(' ').toLowerCase().includes(s)));
+  $('orders-list').innerHTML=l.map(orderRow).join('')||'<div class="card p-6 text-sm text-gray-400">Brak zamówień.</div>';
+}
+function openOrder(id){
+  const o=O.find(x=>x.id==id);if(!o)return;
+  const items=oItems(o);
+  const sum=items.reduce((s,i)=>s+(parseFloat(i.price)||0)*(i.quantity||1),0);
+  const coupon=o.coupon_code||o.discount_code||o.coupon;
+  const known=['items','id'];
+  const extra=Object.entries(o).filter(([k])=>!known.includes(k));
+  openModal(`
+  <div class="flex justify-between items-start gap-3 mb-4"><div><p class="text-xs text-gray-400 font-bold uppercase">Zamówienie</p><h2 class="cond text-2xl">#${esc(o.order_number||o.id)}</h2></div>
+    <div class="flex items-center gap-2"><span class="badge st-${esc(o.status)}">${esc(o.status)}</span><button onclick="closeModal()" class="btn b-ghost">✕</button></div></div>
+  <div class="grid sm:grid-cols-2 gap-3 text-sm mb-4">
+    <div class="bg-gray-50 rounded-xl p-3"><p class="lbl">Klient</p><p class="font-bold">${esc(oName(o))}</p><a class="text-v text-xs underline" href="mailto:${esc(oMail(o))}">${esc(oMail(o))}</a>${o.phone?`<p class="text-xs">${esc(o.phone)}</p>`:''}</div>
+    <div class="bg-gray-50 rounded-xl p-3"><p class="lbl">Płatność</p><p class="font-bold text-lg">${pln(oAmount(o))}</p><p class="text-xs text-gray-500">${dt(o.created_at)}</p>${coupon?`<p class="text-xs mt-1">Kod: <b class="text-p">${esc(coupon)}</b></p>`:''}</div>
+  </div>
+  <p class="lbl">Pozycje (${items.length})</p>
+  <div class="border rounded-xl divide-y mb-4">${items.map(i=>`<div class="flex justify-between gap-3 p-3 text-sm"><span>${esc(i.title||i.name||'Produkt')} <span class="text-gray-400">× ${esc(i.quantity||1)}</span></span><b>${pln((parseFloat(i.price)||0)*(i.quantity||1))}</b></div>`).join('')||'<p class="p-3 text-sm text-gray-400">Brak szczegółów pozycji</p>'}
+    ${items.length?`<div class="flex justify-between p-3 text-xs text-gray-500 bg-gray-50 rounded-b-xl"><span>Suma pozycji</span><b>${pln(sum)}</b></div>`:''}</div>
+  <div class="flex flex-wrap gap-2 items-end mb-4">
+    <div class="flex-1 min-w-[160px]"><label class="lbl">Zmień status</label><select id="o-status" class="inp">${['pending','paid','completed','cancelled'].map(s=>`<option ${o.status===s?'selected':''}>${s}</option>`).join('')}</select></div>
+    <button onclick="setOrderStatus('${esc(o.id)}')" class="btn b-pri">Zapisz status</button>
+    <button onclick="delOrder('${esc(o.id)}')" class="btn b-red">Usuń</button></div>
+  <details class="text-xs"><summary class="cursor-pointer font-bold text-gray-500">Wszystkie dane zamówienia</summary>
+    <div class="mt-2 bg-gray-50 rounded-xl p-3 space-y-1 break-all">${extra.map(([k,v])=>`<p><b>${esc(k)}:</b> ${esc(typeof v==='object'?JSON.stringify(v):v)}</p>`).join('')}<p><b>id:</b> ${esc(o.id)}</p></div></details>`);
+}
+async function setOrderStatus(id){
+  const st=$('o-status').value;
+  if(isPaid({status:st})&&!confirm('Oznaczyć jako opłacone? Klient otrzyma dostęp do plików na koncie.'))return;
+  const r=await q(db.from('orders').update({status:st}).eq('id',id).select(),'status');
+  if(r){toast('Status zaktualizowany');await loadOrders();renderDashboard();openOrder(id)}
+}
+async function delOrder(id){
+  if(!confirm('Na pewno usunąć to zamówienie?'))return;
+  const r=await q(db.from('orders').delete().eq('id',id).select(),'usuwanie');
+  if(r){toast('Zamówienie usunięte');closeModal();await loadOrders();renderDashboard()}
+}
+
+/* ---- PRODUCTS ---- */
+const slugify=s=>s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/ł/g,'l').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
+function autoSlug(){if(!$('p-id').value)$('p-slug').value=slugify($('p-title').value)}
+async function loadProducts(){const d=await q(db.from('products').select('*').order('created_at',{ascending:false}),'produkty');P=d||[];$('p-count').textContent='('+P.length+')';
+  $('products-list').innerHTML=P.map(p=>`<div class="flex flex-wrap items-center justify-between gap-2 p-3 rounded-xl border border-gray-100">
+    <div class="min-w-0"><p class="font-bold text-sm">${esc(p.title)} ${p.is_discounted?'<span class="badge bg-pink-100 text-pink-700">promo</span>':''}</p>
+    <p class="text-xs text-gray-500">${pln(p.price)}${p.is_discounted?` → <b class="text-p">${pln(p.discount_price)}</b>`:''} · ${esc(p.category||'bez kategorii')} · plików: ${(p.download_files||[]).length}</p>
+    <p class="text-[10px] text-gray-300 select-all">${esc(p.id)}</p></div>
+    <div class="flex gap-2"><button onclick="editProduct('${esc(p.id)}')" class="btn b-ghost">Edytuj</button><button onclick="delProduct('${esc(p.id)}')" class="btn b-red">Usuń</button></div></div>`).join('')||'<p class="text-sm text-gray-400">Brak produktów.</p>'}
+function renderExisting(){$('p-existing').innerHTML=editFiles.map((f,i)=>`<div class="flex justify-between items-center bg-purple-50 rounded-lg px-3 py-1.5 text-xs"><a href="${esc(f.url)}" target="_blank" class="truncate text-v font-semibold">📎 ${esc(f.name)}</a><button type="button" onclick="editFiles.splice(${i},1);renderExisting()" class="text-red-600 font-bold ml-2">usuń</button></div>`).join('')}
+function resetProduct(){document.querySelector('#s-products form').reset();$('p-id').value='';editFiles=[];renderExisting();$('pf-title').textContent='Nowy produkt';$('p-save').textContent='Zapisz produkt';$('pf-cancel').classList.add('hidden')}
+function editProduct(id){const p=P.find(x=>x.id==id);if(!p)return;
+  $('p-id').value=p.id;$('p-title').value=p.title||'';$('p-slug').value=p.slug||'';$('p-desc').value=p.description||'';$('p-price').value=p.price??'';$('p-price30').value=p.price_before_30_days||'';
+  $('p-disc').checked=!!p.is_discounted;$('p-dprice').value=p.discount_price||'';$('p-type').value=p.product_type||'eproduct';$('p-cat').value=p.category||'';$('p-images').value=(p.images||[]).join(', ');
+  editFiles=[...(p.download_files||[])];renderExisting();$('pf-title').textContent='Edycja: '+p.title;$('p-save').textContent='Zaktualizuj produkt';$('pf-cancel').classList.remove('hidden');window.scrollTo({top:0,behavior:'smooth'})}
+const safeName=n=>n.normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/ł/g,'l').replace(/[^a-zA-Z0-9._-]/g,'_');
+async function uploadFiles(files,slug){
+  const prog=$('p-prog');prog.classList.remove('hidden');prog.textContent='Przygotowywanie plików…';
+  let file,name;
+  if(files.length>1||files.some(f=>f.webkitRelativePath)){
+    const zip=new JSZip();files.forEach(f=>zip.file(f.webkitRelativePath||f.name,f));
+    prog.textContent='Pakowanie do ZIP…';name=`${slug}_files.zip`;
+    file=new File([await zip.generateAsync({type:'blob'})],name,{type:'application/zip'});
+  }else{file=files[0];name=file.name}
+  const path=`${slug}/${Date.now()}_${safeName(name)}`;prog.textContent='Wysyłanie do magazynu…';
+  const{error}=await db.storage.from('product-files').upload(path,file,{cacheControl:'3600',upsert:true});
+  if(error){prog.classList.add('hidden');throw error}
+  const{data}=db.storage.from('product-files').getPublicUrl(path);prog.classList.add('hidden');
+  return{name,path,url:data.publicUrl,type:name.split('.').pop()};
+}
+async function saveProduct(e){
+  e.preventDefault();const b=$('p-save');b.disabled=true;b.textContent='Zapisywanie…';
+  try{
+    const id=$('p-id').value,slug=slugify($('p-slug').value)||slugify($('p-title').value);
+    const files=[...$('p-files').files,...$('p-folder').files];
+    let df=[...editFiles];if(files.length)df.push(await uploadFiles(files,slug));
+    const disc=num($('p-dprice').value);
+    if($('p-disc').checked&&disc==null){toast('Podaj cenę promocyjną lub wyłącz promocję.');return}
+    const data={title:$('p-title').value.trim(),slug,description:$('p-desc').value,price:num($('p-price').value),price_before_30_days:num($('p-price30').value),is_discounted:$('p-disc').checked,discount_price:disc,product_type:$('p-type').value,category:$('p-cat').value.trim(),images:$('p-images').value.split(',').map(s=>s.trim()).filter(Boolean),download_files:df};
+    const r=id?await db.from('products').update(data).eq('id',id):await db.from('products').insert(data);
+    if(r.error)toast('Błąd zapisu: '+r.error.message);else{toast(id?'Produkt zaktualizowany':'Produkt dodany');resetProduct();loadProducts()}
+  }catch(err){console.error(err);toast('Błąd: '+(err.message||'nie udało się zapisać'))}
+  finally{b.disabled=false;b.textContent=$('p-id').value?'Zaktualizuj produkt':'Zapisz produkt'}
+}
+async function delProduct(id){if(!confirm('Usunąć ten produkt?'))return;const r=await q(db.from('products').delete().eq('id',id).select(),'usuwanie');if(r){toast('Produkt usunięty');loadProducts()}}
+
+/* ---- COUPONS ---- */
+function couponType(){const t=$('c-type').value;$('c-thr-w').classList.toggle('hidden',t!=='threshold_reward');$('c-val-w').classList.toggle('hidden',t==='threshold_reward');$('c-val-l').textContent=t==='percent'?'Wartość (%)':'Wartość (PLN)'}
+async function saveCoupon(e){
+  e.preventDefault();const t=$('c-type').value;let value=null,thr=null,rew=null;
+  if(t==='threshold_reward'){thr=num($('c-thr').value);rew=num($('c-rew').value);if(!thr||!rew)return toast('Podaj próg i rabat dla kodu stopniowego.')}
+  else{value=num($('c-value').value);if(!value)return toast('Podaj wartość zniżki.');if(t==='percent'&&value>100)return toast('Procent nie może przekraczać 100.')}
+  const pids=$('c-pids').value.split(',').map(s=>s.trim()).filter(Boolean),v=$('c-valid').value;
+  const r=await q(db.from('coupons').insert({code:$('c-code').value.toUpperCase().trim(),discount_type:t,discount_value:value,min_order_amount:num($('c-min').value),step_threshold:thr,step_reward:rew,category_restriction:$('c-cat').value.trim()||null,product_ids:pids.length?pids:null,usage_limit:$('c-limit').value?parseInt($('c-limit').value):null,valid_until:v?new Date(v).toISOString():null}).select(),'kod');
+  if(r){toast('Kod utworzony');e.target.reset();couponType();loadCoupons()}
+}
+async function loadCoupons(){const d=await q(db.from('coupons').select('*').order('created_at',{ascending:false}),'kody');C=d||[];
+  $('coupons-list').innerHTML=C.map(c=>{const d=c.discount_type==='percent'?c.discount_value+'%':c.discount_type==='amount'?pln(c.discount_value):`${pln(c.step_reward)} za każde ${pln(c.step_threshold)}`;const exp=c.valid_until&&new Date(c.valid_until)<new Date();
+  return `<div class="flex flex-wrap items-center justify-between gap-2 p-3 rounded-xl border border-gray-100"><div><p><b class="text-v tracking-wider">${esc(c.code)}</b> <span class="text-sm font-semibold">${esc(d)}</span> ${exp?'<span class="badge st-cancelled">wygasł</span>':''}</p>
+  <p class="text-xs text-gray-500">${c.min_order_amount?`min. ${pln(c.min_order_amount)} · `:''}${c.category_restriction?`kat. ${esc(c.category_restriction)} · `:''}${c.product_ids?'wybrane produkty · ':''}${c.usage_limit?`limit ${c.usage_limit} · `:''}do: ${c.valid_until?dt(c.valid_until):'bez limitu'}</p></div>
+  <button onclick="delCoupon('${esc(c.id)}')" class="btn b-red">Usuń</button></div>`}).join('')||'<p class="text-sm text-gray-400">Brak kodów.</p>'}
+async function delCoupon(id){if(!confirm('Usunąć kod?'))return;const r=await q(db.from('coupons').delete().eq('id',id).select(),'usuwanie');if(r){toast('Kod usunięty');loadCoupons()}}
+
+/* ---- REVIEWS ---- */
+async function loadReviews(){const d=await q(db.from('reviews').select('*').order('created_at',{ascending:false}),'opinie');R=d||[];
+  const n=R.filter(r=>r.status==='pending').length;$('rev-badge').textContent=n;$('rev-badge').classList.toggle('hidden',!n);
+  $('reviews-list').innerHTML=R.map(r=>`<div class="flex flex-wrap items-start justify-between gap-3 p-3 rounded-xl border border-gray-100"><div class="min-w-0"><p class="text-sm"><b>${esc(r.author_name||'Anonim')}</b> <span class="text-amber-500">${'★'.repeat(Math.max(0,Math.min(5,r.rating|0)))}</span> <span class="badge st-${esc(r.status)}">${esc(r.status)}</span></p><p class="text-sm text-gray-600 mt-1 break-words">${esc(r.comment)}</p></div>
+  <div class="flex gap-2">${r.status!=='approved'?`<button onclick="approveReview('${esc(r.id)}')" class="btn bg-green-100 text-green-700">Zatwierdź</button>`:''}<button onclick="delReview('${esc(r.id)}')" class="btn b-red">Usuń</button></div></div>`).join('')||'<p class="text-sm text-gray-400">Brak opinii.</p>'}
+async function approveReview(id){const r=await q(db.from('reviews').update({status:'approved'}).eq('id',id).select(),'opinia');if(r){toast('Opinia zatwierdzona');await loadReviews();renderDashboard()}}
+async function delReview(id){if(!confirm('Usunąć opinię?'))return;const r=await q(db.from('reviews').delete().eq('id',id).select(),'usuwanie');if(r){toast('Opinia usunięta');await loadReviews();renderDashboard()}}
+
+init();
+</script>
 </body>
 </html>
