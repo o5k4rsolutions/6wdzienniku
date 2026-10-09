@@ -273,7 +273,7 @@ async function initCheckout(){
     $('stripe-container').classList.remove('hidden');
 
     const res=await fetch('/api/create-payment-intent',{
-      method:'POST',headers:{'Content-Type':'application/json'},
+      method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+session.access_token},
       body:JSON.stringify({
         items:cart,userId:session.user.id,
         couponCode:activeCoupon?activeCoupon.code:null,
@@ -302,7 +302,7 @@ window.processFreeOrder=async function(){
     const{data:{session}}=await supabaseClient.auth.getSession();
     if(!session)throw new Error('Sesja wygasła – zaloguj się ponownie.');
     const res=await fetch('/api/create-free-order',{
-      method:'POST',headers:{'Content-Type':'application/json'},
+      method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+session.access_token},
       body:JSON.stringify({items:getCart(),userId:session.user.id,couponCode:activeCoupon?activeCoupon.code:null,discountAmount:currentDiscount,expectedTotal:currentTotal})
     });
     let r={};
