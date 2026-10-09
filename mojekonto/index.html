@@ -1,427 +1,309 @@
 <!DOCTYPE html>
 <html lang="pl">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Moje Konto - 6WDzienniku</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <link rel="icon" type="image/x-icon" href="https://files-6wdzienniku.vercel.app/content/6wd/logo_favicon_6.svg">
-    <link href="https://fonts.googleapis.com/css2?family=Open+Sans+Condensed:ital,wght@0,300;0,700;1,300&family=Open+Sans:ital,wght@0,300;0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: { brandViolet: '#5B21B6', brandPink: '#EC4899' },
-                    fontFamily: { sans: ['"Open Sans"', 'sans-serif'], condensed: ['"Open Sans Condensed"', 'sans-serif'] },
-                    borderRadius: { 'custom': '10px' }
-                }
-            }
-        }
-    </script>
-    <style>
-        body { font-family: 'Open Sans', sans-serif; background-color: #FAFAFC; color: #1F2937; }
-        h1, h2, h3, .font-condensed { font-family: 'Open Sans Condensed', sans-serif; font-weight: 700; text-transform: uppercase; }
-        .text-gradient { background: linear-gradient(135deg, #5B21B6 0%, #EC4899 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        .tab-btn.active { background-color: #5B21B6; color: white; border-color: #5B21B6; }
-        .tab-btn.active svg { stroke: white; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Moje Konto - 6WDzienniku</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link rel="icon" type="image/x-icon" href="https://files-6wdzienniku.vercel.app/content/6wd/logo_favicon_6.svg">
+<link href="https://fonts.googleapis.com/css2?family=Open+Sans+Condensed:ital,wght@0,300;0,700;1,300&family=Open+Sans:ital,wght@0,300;0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<script>
+tailwind.config={theme:{extend:{colors:{brandViolet:'#5B21B6',brandPink:'#EC4899'},fontFamily:{sans:['"Open Sans"','sans-serif'],condensed:['"Open Sans Condensed"','sans-serif']},borderRadius:{custom:'10px'}}}}
+</script>
+<style>
+body{font-family:'Open Sans',sans-serif;background:#F6F4FB;color:#1F2937}
+h1,h2,h3,.font-condensed{font-family:'Open Sans Condensed',sans-serif;font-weight:700;text-transform:uppercase}
+.text-gradient{background:linear-gradient(135deg,#5B21B6,#EC4899);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.card{background:#fff;border:1px solid #ECE8F5;border-radius:14px;box-shadow:0 1px 2px #5B21B60a,0 10px 28px -16px #5B21B633}
+.tab-btn{display:flex;align-items:center;gap:.75rem;white-space:nowrap;padding:.75rem 1rem;border-radius:12px;border:1px solid #ECE8F5;background:#fff;font-size:.85rem;font-weight:600;color:#4B5563;transition:.15s}
+.tab-btn:hover{border-color:#C4B5FD;color:#5B21B6}
+.tab-btn.active{background:linear-gradient(135deg,#5B21B6,#7C3AED);color:#fff;border-color:transparent;box-shadow:0 8px 18px -8px #5B21B6aa}
+.pill{font-size:.65rem;font-weight:700;padding:.2rem .6rem;border-radius:99px;text-transform:uppercase;display:inline-flex;align-items:center;gap:.25rem}
+.p-green{background:#DCFCE7;color:#15803D}.p-amber{background:#FEF3C7;color:#B45309}.p-red{background:#FEE2E2;color:#B91C1C}
+.fade{animation:fade .25s ease}@keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+.skel{background:linear-gradient(90deg,#f1eef8 25%,#e8e3f4 37%,#f1eef8 63%);background-size:400% 100%;animation:sk 1.3s infinite;border-radius:10px}@keyframes sk{0%{background-position:100% 50%}100%{background-position:0 50%}}
+.fld{width:100%;font-size:.85rem;padding:.6rem .75rem;border:1px solid #DDD8EA;border-radius:10px;background:#fff;outline:none}
+.fld:focus{border-color:#5B21B6;box-shadow:0 0 0 3px #5B21B622}
+</style>
 </head>
 <body class="min-h-screen flex flex-col justify-between overflow-x-hidden">
 
-    <div id="toast" class="fixed top-5 right-5 z-50 opacity-0 pointer-events-none transition-opacity duration-300 bg-gray-900 text-white px-5 py-3 rounded-custom shadow-xl border border-purple-500/30 flex items-center gap-3">
-        <span id="toast-message" class="text-sm font-medium">Powiadomienie</span>
+<div id="toast" class="fixed top-5 right-5 z-50 opacity-0 pointer-events-none transition-opacity duration-300 bg-gray-900 text-white px-5 py-3 rounded-custom shadow-xl border border-purple-500/30 max-w-xs">
+  <span id="toast-message" class="text-sm font-medium"></span>
+</div>
+
+<header class="w-full bg-white border-b border-gray-200 sticky top-0 z-40">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
+    <a href="https://6wdzienniku.vercel.app/"><img src="https://files-6wdzienniku.vercel.app/content/6wd/logo_6wdzienn_kolor.png" alt="6 w dzienniku" class="h-16 sm:h-20 object-contain"></a>
+    <a href="/sklep" class="text-sm font-semibold text-brandViolet hover:underline flex items-center gap-1.5"><span data-i="bag"></span>Przejdź do sklepu</a>
+  </div>
+</header>
+
+<main class="flex-grow max-w-7xl mx-auto px-4 sm:px-6 py-8 w-full space-y-6">
+
+  <div id="pay-banner" class="hidden card p-4 flex items-center gap-3 text-sm border-purple-200 bg-purple-50">
+    <svg id="pay-spin" class="w-5 h-5 text-brandViolet animate-spin shrink-0" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" opacity=".25"/><path fill="currentColor" opacity=".75" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/></svg>
+    <span id="pay-text" class="font-semibold text-purple-900"></span>
+  </div>
+
+  <div class="relative overflow-hidden rounded-[18px] p-6 sm:p-8 text-white flex flex-col md:flex-row justify-between items-start md:items-center gap-5" style="background:linear-gradient(120deg,#3B0F85 0%,#5B21B6 55%,#B8318A 100%)">
+    <div class="absolute -right-10 -top-10 w-56 h-56 rounded-full bg-white/10"></div>
+    <div class="relative flex items-center gap-4">
+      <div id="avatar" class="w-14 h-14 rounded-full bg-white/20 border border-white/30 flex items-center justify-center font-condensed text-2xl">?</div>
+      <div>
+        <h1 class="text-3xl leading-none">Witaj, <span id="user-name">...</span></h1>
+        <div id="last-order-info" class="text-xs text-purple-100 mt-1.5">Sprawdzanie zamówień...</div>
+      </div>
     </div>
+    <button type="button" onclick="switchTab('accesses')" class="relative px-5 py-2.5 bg-white text-brandViolet font-bold rounded-custom text-xs hover:bg-purple-50 transition flex items-center gap-2"><span data-i="dl"></span>Moje materiały</button>
+  </div>
 
-    <header class="w-full bg-white border-b border-gray-200 sticky top-0 z-40">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
-            <a href="https://6wdzienniku.vercel.app/">
-                <img src="https://files-6wdzienniku.vercel.app/content/6wd/logo_6wdzienn_kolor.png" alt="6 w dzienniku" class="h-16 sm:h-20 object-contain">
-            </a>
-            <a href="/sklep" class="text-sm font-semibold text-brandViolet hover:underline">Przejdź do sklepu</a>
-        </div>
-    </header>
+  <div class="grid grid-cols-3 gap-3 sm:gap-4">
+    <div class="card p-4 flex items-center gap-3"><div class="w-10 h-10 rounded-xl bg-purple-100 text-brandViolet flex items-center justify-center shrink-0"><span data-i="bag"></span></div><div><p id="st-orders" class="font-condensed text-2xl leading-none">–</p><p class="text-[11px] text-gray-500 font-semibold">Zamówienia</p></div></div>
+    <div class="card p-4 flex items-center gap-3"><div class="w-10 h-10 rounded-xl bg-pink-100 text-brandPink flex items-center justify-center shrink-0"><span data-i="file"></span></div><div><p id="st-files" class="font-condensed text-2xl leading-none">–</p><p class="text-[11px] text-gray-500 font-semibold">Pliki do pobrania</p></div></div>
+    <div class="card p-4 flex items-center gap-3"><div class="w-10 h-10 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center shrink-0"><span data-i="star"></span></div><div><p id="st-reviews" class="font-condensed text-2xl leading-none">–</p><p class="text-[11px] text-gray-500 font-semibold">Opinie</p></div></div>
+  </div>
 
-    <main class="flex-grow max-w-7xl mx-auto px-4 sm:px-6 py-10 w-full">
-        <div class="bg-white p-6 rounded-custom border border-gray-200 shadow-sm mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-            <div>
-                <h1 class="text-3xl font-condensed text-gray-900">Witaj, <span id="user-name" class="text-gradient">Ładowanie...</span></h1>
-                <div id="last-order-info" class="text-xs text-gray-500 mt-1">Sprawdzanie zamówień...</div>
+  <div class="grid grid-cols-1 md:grid-cols-12 gap-6">
+    <aside class="md:col-span-3">
+      <div class="flex md:flex-col gap-2 overflow-x-auto pb-1 md:sticky md:top-28">
+        <button type="button" onclick="switchTab('orders')" id="tab-btn-orders" class="tab-btn active"><span data-i="bag"></span>Moje zamówienia</button>
+        <button type="button" onclick="switchTab('accesses')" id="tab-btn-accesses" class="tab-btn"><span data-i="file"></span>Moje dostępy (Materiały)</button>
+        <button type="button" onclick="switchTab('reviews')" id="tab-btn-reviews" class="tab-btn"><span data-i="star"></span>Moje opinie</button>
+        <button type="button" onclick="logout()" class="tab-btn !text-red-600 !border-red-200 hover:!bg-red-50 md:mt-3"><span data-i="out"></span>Wyloguj się</button>
+      </div>
+    </aside>
+
+    <section class="md:col-span-9 card p-5 sm:p-6 min-h-[320px]">
+      <div id="tab-orders" class="fade">
+        <h2 class="text-xl mb-4 border-b pb-2">Moje Zamówienia</h2>
+        <div id="orders-list" class="space-y-3"><div class="skel h-20"></div><div class="skel h-20"></div></div>
+      </div>
+
+      <div id="tab-accesses" class="hidden fade">
+        <h2 class="text-xl mb-4 border-b pb-2">Moje Dostępy (Pliki i Materiały)</h2>
+        <div id="accesses-list" class="space-y-4"><div class="skel h-24"></div></div>
+      </div>
+
+      <div id="tab-reviews" class="hidden fade">
+        <h2 class="text-xl mb-4 border-b pb-2">Moje Opinie</h2>
+        <form id="review-form" onsubmit="submitReview(event)" class="bg-purple-50/60 border border-purple-100 p-4 rounded-xl space-y-3 mb-6">
+          <h3 class="font-bold text-sm">Wystaw opinię do zakupionego produktu</h3>
+          <select id="review-product-select" class="fld" required><option value="" disabled selected>Wybierz zakupiony produkt...</option></select>
+          <div>
+            <input type="hidden" id="review-rating" value="5">
+            <div id="star-picker" class="flex gap-1" role="radiogroup" aria-label="Ocena"></div>
+          </div>
+          <textarea id="review-comment" placeholder="Krótki opis opinii..." class="fld h-24" required maxlength="1000"></textarea>
+          <button type="submit" id="review-submit-btn" class="px-5 py-2.5 bg-brandViolet text-white text-xs font-bold rounded-custom hover:bg-purple-800 transition disabled:opacity-50">Dodaj opinię</button>
+        </form>
+        <div id="reviews-list" class="space-y-3"></div>
+      </div>
+    </section>
+  </div>
+</main>
+
+<footer class="bg-white border-t border-gray-200 py-8 text-center text-sm text-gray-500">
+  <p>© 2026 <b>6WDzienniku</b></p><p>Wszelkie prawa zastrzeżone.</p>
+</footer>
+
+<script>
+const SUPABASE_URL="https://fxksikgdberwgttvglko.supabase.co";
+const SUPABASE_ANON_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ4a3Npa2dkYmVyd2d0dHZnbGtvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA0MzU3NzYsImV4cCI6MjEwNjAxMTc3Nn0.sKf3vvVbaae5-mdg5zwqrgUl6AkXjENanwhDWbH_PXw";
+const supabaseClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+
+const P={
+  bag:'M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z',
+  file:'M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z',
+  dl:'M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4',
+  star:'M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z',
+  out:'M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1',
+  ok:'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z',
+  clock:'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z',
+  no:'M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z',
+  inbox:'M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4'
+};
+const ico=(k,c='w-5 h-5')=>`<svg class="${c} shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="${P[k]}"/></svg>`;
+const stars=(n,c='w-4 h-4')=>[1,2,3,4,5].map(i=>`<svg class="${c} ${i<=n?'text-amber-400':'text-gray-300'}" viewBox="0 0 24 24" fill="currentColor"><path d="${P.star}"/></svg>`).join('');
+const empty=(t)=>`<div class="text-center py-10 text-gray-400">${ico('inbox','w-10 h-10 mx-auto mb-2')}<p class="text-sm">${t}</p></div>`;
+document.querySelectorAll('[data-i]').forEach(e=>e.outerHTML=ico(e.dataset.i));
+
+let currentUser=null,userName='',orders=[],myReviews=[],toastT;
+
+function showToast(m){const t=$('toast');$('toast-message').innerText=m;t.classList.remove('opacity-0','pointer-events-none');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.add('opacity-0','pointer-events-none'),4000)}
+window.switchTab=function(n){
+  ['orders','accesses','reviews'].forEach(t=>{$('tab-'+t).classList.add('hidden');$('tab-btn-'+t).classList.remove('active')});
+  $('tab-'+n).classList.remove('hidden');$('tab-btn-'+n).classList.add('active');
+};
+window.logout=async function(){try{await supabaseClient.auth.signOut()}catch(e){console.error(e)}finally{location.href='https://6wdzienniku.vercel.app'}};
+
+const isPaid=s=>['opłacone','paid','completed','zakończone'].includes(String(s||'').toLowerCase());
+function parseItems(o){try{const i=typeof o.items==='string'?JSON.parse(o.items):o.items;return Array.isArray(i)?i:[]}catch{return[]}}
+function statusPill(s){
+  const l=String(s||'').toLowerCase();
+  if(isPaid(l))return `<span class="pill p-green">${ico('ok','w-3 h-3')}Opłacone</span>`;
+  if(['cancelled','canceled','anulowane'].includes(l))return `<span class="pill p-red">${ico('no','w-3 h-3')}Anulowane</span>`;
+  return `<span class="pill p-amber">${ico('clock','w-3 h-3')}Oczekuje</span>`;
+}
+const shortId=o=>o.order_number?String(o.order_number):String(o.id).slice(0,8).toUpperCase();
+
+async function initAccount(){
+  try{
+    const params=new URLSearchParams(location.search);
+    const justPaid=params.get('payment_success')==='true';
+    if(justPaid){
+      localStorage.removeItem('cart');
+      history.replaceState({},document.title,location.pathname);
+    }
+    const{data:{session},error}=await supabaseClient.auth.getSession();
+    if(error||!session){location.href='/api-login/';return}
+    currentUser=session.user;
+
+    let full=null;
+    try{const{data:p}=await supabaseClient.from('profiles').select('full_name').eq('id',currentUser.id).maybeSingle();full=p?.full_name||null}catch{}
+    const display=full||currentUser.email||'Użytkowniku';
+    userName=full||'Klient'; 
+    $('user-name').innerText=display;$('avatar').innerText=display.trim().charAt(0).toUpperCase();
+
+    initStars();
+    await loadAll();
+    if(justPaid)await waitForPayment();
+  }catch(err){console.error('Błąd inicjalizacji konta:',err)}
+}
+
+async function waitForPayment(){
+  const b=$('pay-banner');b.classList.remove('hidden');
+  $('pay-text').innerText='Potwierdzamy Twoją płatność – to potrwa chwilę...';
+  const fresh=()=>orders.some(o=>isPaid(o.status)&&Date.now()-new Date(o.created_at)<15*60*1000);
+  for(let i=0;i<8&&!fresh();i++){await sleep(2500);await loadAll()}
+  $('pay-spin').classList.add('hidden');
+  if(fresh()){$('pay-text').innerText='Płatność potwierdzona! Twoje pliki są dostępne w zakładce „Moje dostępy".';showToast('Płatność zakończona pomyślnie! Koszyk został opróżniony.');switchTab('accesses')}
+  else $('pay-text').innerText='Płatność jest jeszcze przetwarzana. Odśwież stronę za chwilę – zamówienie pojawi się automatycznie.';
+  setTimeout(()=>b.classList.add('hidden'),12000);
+}
+
+async function loadAll(){
+  const{data,error}=await supabaseClient.from('orders').select('*').eq('user_id',currentUser.id).order('created_at',{ascending:false});
+  if(error)console.error('Zamówienia:',error);
+  orders=data||[];
+  renderOrders();
+  await Promise.all([renderAccesses(),loadReviews()]);
+  fillReviewSelect();
+  $('st-orders').innerText=orders.length;
+}
+
+function renderOrders(){
+  const list=$('orders-list'),info=$('last-order-info');
+  if(!orders.length){list.innerHTML=empty('Nie masz jeszcze żadnych zamówień.');info.innerText='Brak ostatnich zamówień';return}
+  const last=orders.find(o=>isPaid(o.status));
+  if(last){const it=parseItems(last);info.innerText=`Ostatnie zamówienie: #${shortId(last)} (${it[0]?.title||'Produkt'}${it.length>1?` i ${it.length-1} więcej`:''})`}
+  else info.innerText='Brak opłaconych zamówień';
+
+  list.innerHTML=orders.map(o=>{
+    const items=parseItems(o),paid=isPaid(o.status);
+    const chips=items.map(i=>`<span class="inline-block bg-gray-100 text-gray-700 rounded-md px-2 py-0.5 text-[11px] font-semibold">${esc(i.title||'Produkt')} ×${esc(i.quantity||1)}</span>`).join(' ');
+    return `<div class="p-4 border border-gray-100 rounded-xl hover:border-purple-200 transition flex flex-col sm:flex-row justify-between gap-3">
+      <div class="min-w-0">
+        <div class="flex items-center gap-2 flex-wrap"><span class="font-bold text-sm">#${esc(shortId(o))}</span><span class="text-xs text-gray-400">${new Date(o.created_at).toLocaleDateString('pl-PL')}</span></div>
+        <div class="flex flex-wrap gap-1.5 mt-2">${chips||'<span class="text-xs text-gray-400">Brak szczegółów pozycji</span>'}</div>
+      </div>
+      <div class="sm:text-right flex sm:flex-col justify-between sm:justify-start items-center sm:items-end gap-2">
+        <span class="font-condensed text-xl text-brandViolet">${(parseFloat(o.total_amount||0)).toFixed(2)} PLN</span>
+        ${statusPill(o.status)}
+        ${paid?`<button type="button" onclick="switchTab('accesses')" class="text-[11px] font-bold text-brandViolet hover:underline">Zobacz pliki →</button>`:''}
+      </div></div>`;
+  }).join('');
+}
+
+async function renderAccesses(){
+  const list=$('accesses-list');
+  try{
+    const ids=new Set();
+    orders.filter(o=>isPaid(o.status)).forEach(o=>parseItems(o).forEach(i=>{const id=i.id||i.product_id;if(id)ids.add(id)}));
+    if(!ids.size){list.innerHTML=empty('Brak opłaconych produktów z dostępnymi plikami.');$('st-files').innerText=0;return}
+    const{data:products,error}=await supabaseClient.from('products').select('id, title, download_files').in('id',[...ids]);
+    if(error)throw error;
+    let html='',total=0;
+    (products||[]).forEach(p=>{
+      let files=[];try{files=typeof p.download_files==='string'?JSON.parse(p.download_files):(p.download_files||[])}catch{}
+      if(!Array.isArray(files)||!files.length)return;
+      total+=files.length;
+      html+=`<div class="border border-gray-100 rounded-xl overflow-hidden">
+        <div class="px-4 py-3 bg-gradient-to-r from-purple-50 to-pink-50 flex items-center justify-between gap-2">
+          <h3 class="font-bold text-sm text-gray-900">${esc(p.title)}</h3>
+          <span class="pill bg-purple-100 text-purple-800">${files.length} plik(i)</span></div>
+        <div class="p-3 space-y-2">${files.map(f=>`
+          <div class="flex items-center justify-between gap-3 p-2.5 bg-white border border-gray-100 rounded-lg">
+            <div class="flex items-center gap-2.5 min-w-0">
+              <div class="w-9 h-9 rounded-lg bg-purple-100 text-brandViolet flex items-center justify-center shrink-0">${ico('file','w-4 h-4')}</div>
+              <div class="min-w-0"><p class="text-xs font-semibold text-gray-800 truncate">${esc(f.name||'Plik cyfrowy')}</p><p class="text-[10px] text-gray-400 uppercase">${esc(f.type||'plik')}</p></div>
             </div>
-            <button type="button" onclick="switchTab('orders')" class="px-4 py-2 border border-brandViolet text-brandViolet font-semibold rounded-custom text-xs hover:bg-purple-50 transition">
-                Przejdź do zamówień
-            </button>
-        </div>
+            <a href="${esc(f.url)}" download="${esc(f.name||'plik')}" target="_blank" rel="noopener" class="px-3 py-1.5 bg-brandViolet text-white text-[11px] font-bold rounded-lg hover:bg-purple-800 transition flex items-center gap-1.5 shrink-0">${ico('dl','w-3.5 h-3.5')}Pobierz</a>
+          </div>`).join('')}</div></div>`;
+    });
+    $('st-files').innerText=total;
+    list.innerHTML=total?html:empty('Zakupione produkty nie mają podpiętych plików do pobrania.');
+  }catch(err){console.error('Dostępy:',err);list.innerHTML='<p class="text-xs text-red-500">Błąd podczas pobierania plików.</p>'}
+}
 
-        <div class="grid grid-cols-1 md:grid-cols-12 gap-8">
-            <aside class="md:col-span-3 space-y-2">
-                <button type="button" onclick="switchTab('orders')" id="tab-btn-orders" class="tab-btn active w-full flex items-center gap-3 px-4 py-3 rounded-custom border border-gray-200 text-sm font-semibold transition text-left">
-                    <svg class="w-5 h-5 stroke-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path></svg>
-                    Moje zamówienia
-                </button>
-                <button type="button" onclick="switchTab('accesses')" id="tab-btn-accesses" class="tab-btn w-full flex items-center gap-3 px-4 py-3 rounded-custom border border-gray-200 text-sm font-semibold transition text-left">
-                    <svg class="w-5 h-5 stroke-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-                    Moje dostępy (Materiały)
-                </button>
-                <button type="button" onclick="switchTab('reviews')" id="tab-btn-reviews" class="tab-btn w-full flex items-center gap-3 px-4 py-3 rounded-custom border border-gray-200 text-sm font-semibold transition text-left">
-                    <svg class="w-5 h-5 stroke-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"></path></svg>
-                    Moje opinie
-                </button>
-                <button type="button" onclick="logout()" class="w-full flex items-center gap-3 px-4 py-3 rounded-custom border border-red-200 text-red-600 text-sm font-semibold hover:bg-red-50 transition text-left mt-4">
-                    <svg class="w-5 h-5 stroke-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
-                    Wyloguj się
-                </button>
-            </aside>
+function fillReviewSelect(){
+  const sel=$('review-product-select'),map=new Map();
+  orders.filter(o=>isPaid(o.status)).forEach(o=>parseItems(o).forEach(i=>{const id=i.id||i.product_id;if(id&&!map.has(String(id)))map.set(String(id),i.title||'Produkt')}));
+  if(!map.size){sel.innerHTML='<option value="" disabled selected>Brak zakupionych produktów do oceny</option>';return}
+  const reviewed=new Set(myReviews.map(r=>String(r.product_id)));
+  sel.innerHTML='<option value="" disabled selected>Wybierz zakupiony produkt...</option>'+
+    [...map].map(([id,t])=>`<option value="${esc(id)}" ${reviewed.has(id)?'disabled':''}>${esc(t)}${reviewed.has(id)?' (już ocenione)':''}</option>`).join('');
+}
 
-            <section class="md:col-span-9 bg-white p-6 rounded-custom border border-gray-200 shadow-sm">
-                <div id="tab-orders" class="space-y-4">
-                    <h2 class="text-xl font-condensed mb-4 border-b pb-2">Moje Zamówienia</h2>
-                    <div id="orders-list" class="space-y-3 max-h-[450px] overflow-y-auto pr-2"><p class="text-xs text-gray-400">Ładowanie...</p></div>
-                </div>
+async function loadReviews(){
+  const list=$('reviews-list');
+  try{
+    const{data}=await supabaseClient.from('reviews').select('*').eq('user_id',currentUser.id).order('created_at',{ascending:false});
+    myReviews=data||[];$('st-reviews').innerText=myReviews.length;
+    if(!myReviews.length){list.innerHTML=empty('Nie dodałeś jeszcze żadnych opinii.');return}
+    list.innerHTML=myReviews.map(r=>`<div class="p-4 border border-gray-100 rounded-xl space-y-1.5">
+      <div class="flex justify-between items-start gap-2 flex-wrap">
+        <div><p class="font-bold text-sm">${esc(r.product_title||'Produkt')}</p><div class="flex gap-0.5 mt-0.5">${stars(r.rating||5)}</div></div>
+        ${r.status==='approved'?`<span class="pill p-green">${ico('ok','w-3 h-3')}Zatwierdzona</span>`:`<span class="pill p-amber">${ico('clock','w-3 h-3')}W trakcie zatwierdzania</span>`}
+      </div>
+      <p class="text-xs text-gray-600 break-words">${esc(r.comment||'')}</p>
+      <span class="block text-[10px] text-gray-400">${new Date(r.created_at).toLocaleDateString('pl-PL')}</span></div>`).join('');
+  }catch(err){console.error('Opinie:',err)}
+}
 
-                <div id="tab-accesses" class="space-y-4 hidden">
-                    <h2 class="text-xl font-condensed mb-4 border-b pb-2">Moje Dostępy (Pliki i Materiały)</h2>
-                    <div id="accesses-list" class="grid grid-cols-1 gap-4"><p class="text-xs text-gray-400">Ładowanie...</p></div>
-                </div>
+function setRating(n){
+  $('review-rating').value=n;
+  $('star-picker').innerHTML=[1,2,3,4,5].map(i=>`<button type="button" onclick="setRating(${i})" role="radio" aria-checked="${i===n}" aria-label="${i} z 5" class="p-0.5 transition hover:scale-110"><svg class="w-8 h-8 ${i<=n?'text-amber-400':'text-gray-300'}" viewBox="0 0 24 24" fill="currentColor"><path d="${P.star}"/></svg></button>`).join('');
+}
+window.setRating=setRating;
+function initStars(){setRating(5)}
 
-                <div id="tab-reviews" class="space-y-4 hidden">
-                    <h2 class="text-xl font-condensed mb-4 border-b pb-2">Moje Opinie</h2>
-                    <form id="review-form" onsubmit="submitReview(event)" class="bg-gray-50 p-4 rounded-custom space-y-3 mb-6">
-                        <h3 class="font-bold text-sm">Wystaw opinię do zamówienia</h3>
-                        <select id="review-product-select" class="w-full text-xs p-2 border rounded-custom bg-white" required>
-                            <option value="" disabled selected>Wybierz zakupiony produkt...</option>
-                        </select>
-                        <select id="review-rating" class="w-full text-xs p-2 border rounded-custom bg-white" required>
-                            <option value="5">5 gwiazdek ★★★★★</option>
-                            <option value="4">4 gwiazdki ★★★★☆</option>
-                            <option value="3">3 gwiazdki ★★★☆☆</option>
-                            <option value="2">2 gwiazdki ★★☆☆☆</option>
-                            <option value="1">1 gwiazdka ★☆☆☆☆</option>
-                        </select>
-                        <textarea id="review-comment" placeholder="Krótki opis opinii..." class="w-full text-xs p-2 border rounded-custom h-20" required></textarea>
-                        <button type="submit" id="review-submit-btn" class="px-4 py-2 bg-brandViolet text-white text-xs font-bold rounded-custom hover:bg-purple-800 transition">Dodaj opinię</button>
-                    </form>
-                    <div id="reviews-list" class="space-y-3"></div>
-                </div>
-            </section>
-        </div>
-    </main>
+window.submitReview=async function(e){
+  e.preventDefault();
+  const btn=$('review-submit-btn'),sel=$('review-product-select');
+  if(!sel.value)return showToast('Wybierz produkt z listy!');
+  if(myReviews.some(r=>String(r.product_id)===sel.value))return showToast('Dodałeś już opinię do tego produktu.');
+  btn.disabled=true;btn.innerText='Wysyłanie...';
+  const{error}=await supabaseClient.from('reviews').insert({
+    user_id:currentUser.id,product_id:sel.value,
+    product_title:sel.options[sel.selectedIndex].text,
+    author_name:userName,
+    rating:parseInt($('review-rating').value),
+    comment:$('review-comment').value.trim(),
+    status:'pending'
+  });
+  btn.disabled=false;btn.innerText='Dodaj opinię';
+  if(error)return showToast('Błąd podczas dodawania opinii: '+error.message);
+  showToast('Opinia została przesłana do zatwierdzania.');
+  $('review-comment').value='';setRating(5);
+  await loadReviews();fillReviewSelect();
+};
 
-    <footer class="bg-white border-t border-gray-200 py-8 text-center text-sm text-gray-500">
-        <div class="max-w-6xl mx-auto px-4 space-y-1">
-            <p>© 2026 <b>6WDzienniku</b></p>
-            <p>Wszelkie prawa zastrzeżone.</p>
-        </div>
-    </footer>
-
-    <script>
-        const SUPABASE_URL = "https://fxksikgdberwgttvglko.supabase.co";
-        const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ4a3Npa2dkYmVyd2d0dHZnbGtvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA0MzU3NzYsImV4cCI6MjEwNjAxMTc3Nn0.sKf3vvVbaae5-mdg5zwqrgUl6AkXjENanwhDWbH_PXw";
-        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-        let currentUser = null;
-
-        function showToast(msg) {
-            const toast = document.getElementById('toast');
-            if (!toast) return;
-            document.getElementById('toast-message').innerText = msg;
-            toast.classList.remove('opacity-0', 'pointer-events-none');
-            toast.classList.add('opacity-100');
-            setTimeout(() => {
-                toast.classList.remove('opacity-100');
-                toast.classList.add('opacity-0', 'pointer-events-none');
-            }, 4000);
-        }
-
-        window.switchTab = function(tabName) {
-            ['orders', 'accesses', 'reviews'].forEach(t => {
-                const tabEl = document.getElementById(`tab-${t}`);
-                const btnEl = document.getElementById(`tab-btn-${t}`);
-                if (tabEl) tabEl.classList.add('hidden');
-                if (btnEl) btnEl.classList.remove('active');
-            });
-
-            const targetTab = document.getElementById(`tab-${tabName}`);
-            const targetBtn = document.getElementById(`tab-btn-${tabName}`);
-
-            if (targetTab) targetTab.classList.remove('hidden');
-            if (targetBtn) targetBtn.classList.add('active');
-        };
-
-        window.logout = async function() {
-            try {
-                await supabaseClient.auth.signOut();
-            } catch (err) {
-                console.error("Błąd wylogowania:", err);
-            } finally {
-                window.location.href = "https://6wdzienniku.vercel.app";
-            }
-        };
-
-        async function initAccount() {
-            try {
-                const urlParams = new URLSearchParams(window.location.search);
-                if (urlParams.get('payment_success') === 'true') {
-                    localStorage.removeItem('cart');
-                    showToast('Płatność zakończona pomyślnie! Twój koszyk został opróżniony.');
-                    window.history.replaceState({}, document.title, window.location.pathname);
-                }
-
-                const { data: { session }, error: sessionError } = await supabaseClient.auth.getSession();
-                
-                if (sessionError || !session) {
-                    window.location.href = '/api-login/';
-                    return;
-                }
-                
-                currentUser = session.user;
-
-                try {
-                    const { data: profile } = await supabaseClient.from('profiles').select('full_name').eq('id', currentUser.id).maybeSingle();
-                    document.getElementById('user-name').innerText = profile?.full_name || currentUser.email || 'Użytkowniku';
-                } catch (e) {
-                    document.getElementById('user-name').innerText = currentUser.email || 'Użytkowniku';
-                }
-
-                await loadOrders();
-                await loadAccesses();
-                await loadReviews();
-
-            } catch (err) {
-                console.error("Błąd inicjalizacji konta:", err);
-            }
-        }
-
-        function isOrderPaid(status) {
-            if (!status) return false;
-            const s = status.toLowerCase();
-            return s === 'opłacone' || s === 'paid' || s === 'completed' || s === 'zakończone';
-        }
-
-        async function loadOrders() {
-            const list = document.getElementById('orders-list');
-            const select = document.getElementById('review-product-select');
-
-            try {
-                const { data: orders, error } = await supabaseClient
-                    .from('orders')
-                    .select('*')
-                    .eq('user_id', currentUser.id)
-                    .order('created_at', { ascending: false });
-
-                if (error || !orders || orders.length === 0) {
-                    list.innerHTML = '<p class="text-xs text-gray-500">Brak zamówień.</p>';
-                    select.innerHTML = '<option value="" disabled selected>Brak zakupionych produktów do oceny</option>';
-                    document.getElementById('last-order-info').innerText = 'Brak ostatnich zamówień';
-                    return;
-                }
-
-                const paidOrders = orders.filter(o => isOrderPaid(o.status));
-
-                if (paidOrders.length > 0) {
-                    const lastOrder = paidOrders[0];
-                    let lastItems = [];
-                    try {
-                        lastItems = typeof lastOrder.items === 'string' ? JSON.parse(lastOrder.items) : (lastOrder.items || []);
-                    } catch(e) { lastItems = []; }
-
-                    const extraCount = lastItems.length > 1 ? ` i ${lastItems.length - 1} więcej` : '';
-                    document.getElementById('last-order-info').innerText = `Ostatnie zamówienie: #${lastOrder.order_number || lastOrder.id} (${lastItems[0]?.title || 'Produkt'}${extraCount})`;
-                } else {
-                    document.getElementById('last-order-info').innerText = 'Brak opłaconych zamówień';
-                }
-
-                const purchasedProductsMap = new Map();
-
-                list.innerHTML = orders.map(o => {
-                    let items = [];
-                    try {
-                        items = typeof o.items === 'string' ? JSON.parse(o.items) : (o.items || []);
-                    } catch(e) { items = []; }
-
-                    const paid = isOrderPaid(o.status);
-
-                    if (paid) {
-                        items.forEach(item => {
-                            const id = item.id || item.product_id;
-                            if (id && !purchasedProductsMap.has(id)) {
-                                purchasedProductsMap.set(id, item.title || 'Produkt');
-                            }
-                        });
-                    }
-
-                    const itemsText = items.map(i => `${i.title || 'Produkt'} (x${i.quantity || 1})`).join(', ');
-
-                    return `
-                        <div class="p-4 border rounded-custom flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-                            <div>
-                                <span class="font-bold text-sm">#${o.order_number || o.id}</span>
-                                <span class="text-xs text-gray-400 ml-2">${new Date(o.created_at).toLocaleDateString('pl-PL')}</span>
-                                <p class="text-xs text-gray-600 mt-1">${itemsText}</p>
-                            </div>
-                            <div class="text-right">
-                                <span class="font-bold text-brandViolet">${parseFloat(o.total_amount || 0).toFixed(2)} PLN</span>
-                                <span class="block text-[10px] uppercase font-bold ${paid ? 'text-green-600' : 'text-amber-600'}">${o.status || 'oczekujące'}</span>
-                            </div>
-                        </div>
-                    `;
-                }).join('');
-
-                select.innerHTML = '<option value="" disabled selected>Wybierz zakupiony produkt...</option>';
-                purchasedProductsMap.forEach((title, id) => {
-                    select.innerHTML += `<option value="${id}">${title}</option>`;
-                });
-
-            } catch (err) {
-                console.error("Błąd ładowania zamówień:", err);
-                list.innerHTML = '<p class="text-xs text-red-500">Błąd podczas ładowania zamówień.</p>';
-            }
-        }
-
-        async function loadAccesses() {
-            const list = document.getElementById('accesses-list');
-            try {
-                const { data: orders } = await supabaseClient
-                    .from('orders')
-                    .select('items, status')
-                    .eq('user_id', currentUser.id);
-
-                if (!orders || orders.length === 0) {
-                    list.innerHTML = '<p class="text-xs text-gray-500">Brak opłaconych zamówień i plików do pobrania.</p>';
-                    return;
-                }
-
-                const productIds = new Set();
-                orders.forEach(o => {
-                    if (isOrderPaid(o.status)) {
-                        let items = [];
-                        try { items = typeof o.items === 'string' ? JSON.parse(o.items) : (o.items || []); } catch(e){}
-                        items.forEach(i => {
-                            const pId = i.id || i.product_id;
-                            if (pId) productIds.add(pId);
-                        });
-                    }
-                });
-
-                if (productIds.size === 0) {
-                    list.innerHTML = '<p class="text-xs text-gray-500">Brak opłaconych produktów z dostępnymi plikami.</p>';
-                    return;
-                }
-
-                const { data: products } = await supabaseClient
-                    .from('products')
-                    .select('id, title, download_files')
-                    .in('id', Array.from(productIds));
-
-                let html = '';
-                let totalFilesCount = 0;
-
-                (products || []).forEach(p => {
-                    let files = [];
-                    try { files = typeof p.download_files === 'string' ? JSON.parse(p.download_files) : (p.download_files || []); } catch(e){}
-                    
-                    if (files && files.length > 0) {
-                        totalFilesCount += files.length;
-                        html += `
-                            <div class="p-4 border rounded-custom bg-white shadow-sm space-y-3">
-                                <h3 class="font-bold text-sm text-gray-900 border-b pb-2 flex items-center justify-between">
-                                    <span>${p.title}</span>
-                                    <span class="text-[10px] bg-purple-100 text-purple-800 px-2 py-0.5 rounded uppercase font-bold">${files.length} plik(i)</span>
-                                </h3>
-                                <div class="space-y-2">
-                                    ${files.map(f => `
-                                        <div class="flex items-center justify-between p-2.5 bg-purple-50/50 border border-purple-100 rounded-custom">
-                                            <div class="flex items-center space-x-2">
-                                                <svg class="w-4 h-4 text-brandViolet" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-                                                <span class="text-xs font-semibold text-gray-800">${f.name || 'Plik cyfrowy'}</span>
-                                            </div>
-                                            <a href="${f.url}" download="${f.name || 'plik'}" target="_blank" class="px-3 py-1 bg-brandViolet text-white text-[11px] font-bold rounded-custom hover:bg-purple-800 transition flex items-center gap-1">
-                                                Pobierz
-                                            </a>
-                                        </div>
-                                    `).join('')}
-                                </div>
-                            </div>
-                        `;
-                    }
-                });
-
-                list.innerHTML = totalFilesCount > 0 ? html : '<p class="text-xs text-gray-500">Zakupione produkty nie posiadają podpiętych plików do pobrania.</p>';
-            } catch (err) {
-                console.error("Błąd dostępu:", err);
-                list.innerHTML = '<p class="text-xs text-red-500">Błąd podczas pobierania plików.</p>';
-            }
-        }
-
-        async function loadReviews() {
-            const list = document.getElementById('reviews-list');
-            try {
-                const { data: reviews } = await supabaseClient.from('reviews').select('*').eq('user_id', currentUser.id).order('created_at', { ascending: false });
-
-                if (!reviews || reviews.length === 0) {
-                    list.innerHTML = '<p class="text-xs text-gray-500">Brak dodanych opinii.</p>';
-                    return;
-                }
-
-                list.innerHTML = reviews.map(r => `
-                    <div class="p-3 border rounded-custom text-xs space-y-1">
-                        <div class="flex justify-between font-bold">
-                            <span>${r.product_title ? r.product_title + ' - ' : ''}Ocena: ${'★'.repeat(r.rating || 5)}</span>
-                            <span class="text-amber-600 uppercase">${r.status === 'pending' ? 'W trakcie zatwierdzania' : 'Zatwierdzona'}</span>
-                        </div>
-                        <p class="text-gray-600">${r.comment || ''}</p>
-                        <span class="block text-[10px] text-gray-400">${new Date(r.created_at).toLocaleDateString('pl-PL')}</span>
-                    </div>
-                `).join('');
-            } catch (err) {
-                console.error("Błąd opinii:", err);
-            }
-        }
-
-        window.submitReview = async function(e) {
-            e.preventDefault();
-            const submitBtn = document.getElementById('review-submit-btn');
-            const select = document.getElementById('review-product-select');
-            const rating = document.getElementById('review-rating').value;
-            const comment = document.getElementById('review-comment').value;
-
-            if (!select.value) {
-                showToast('Wybierz produkt z listy!');
-                return;
-            }
-
-            const selectedTitle = select.options[select.selectedIndex].text;
-
-            submitBtn.disabled = true;
-            submitBtn.innerText = 'Wysyłanie...';
-
-            const { error } = await supabaseClient.from('reviews').insert({
-                user_id: currentUser.id,
-                product_id: select.value,
-                product_title: selectedTitle,
-                author_name: document.getElementById('user-name').innerText,
-                rating: parseInt(rating),
-                comment: comment,
-                status: 'pending'
-            });
-
-            submitBtn.disabled = false;
-            submitBtn.innerText = 'Dodaj opinię';
-
-            if (!error) {
-                showToast('Opinia została przesłana do zatwierdzania.');
-                document.getElementById('review-comment').value = '';
-                select.selectedIndex = 0;
-                loadReviews();
-            } else {
-                showToast('Błąd podczas dodawania opinii: ' + error.message);
-            }
-        };
-
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', initAccount);
-        } else {
-            initAccount();
-        }
-    </script>
+document.readyState==='loading'?document.addEventListener('DOMContentLoaded',initAccount):initAccount();
+</script>
 </body>
 </html>
